@@ -53,13 +53,14 @@ fn main() {
     };
 
     for i in 1..=message_count {
-        println!("Fetching {}", i);
+        println!(" --- Fetching {} --- ", i);
         match imap_socket.fetch(&format!("{}", i), "RFC822") {
             Ok(messages) => {
                 for message in messages.iter() {
                     match mailparse::parse_mail(message.rfc822().unwrap()) {
                         Ok(msg) => {
-                            println!("{:?}", msg);
+                            print_msg(&msg);
+                            println!();
                         }
                         Err(e) => {
                             println!("Could not parse email: {}", e);
@@ -73,3 +74,25 @@ fn main() {
 
     imap_socket.logout().unwrap();
 }
+
+fn print_msg(msg: &mailparse::ParsedMail) {
+    for header in &msg.headers {
+        if let (Ok(key), Ok(value)) = (header.get_key(), header.get_value()) {
+            println!("{}: {}", key, value);
+        } else {
+            println!("Could not parse header");
+        }
+    }
+    if let Ok(body) = msg.get_body() {
+        println!();
+        println!("{}", body);
+    } else {
+        println!("(No body)");
+    }
+    println!("{:?}", msg.get_content_disposition());
+
+    for sub in &msg.subparts {
+        print_msg(sub);
+    }
+}
+
