@@ -6,5 +6,6 @@ authors = ["admin"]
 [dependencies]
 imap = "*"
 native-tls = "*"
+mailparse = "*"
 dotenv = "*"
 
