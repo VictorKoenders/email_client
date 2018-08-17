@@ -2,11 +2,15 @@ extern crate dotenv;
 extern crate imap;
 extern crate mailparse;
 extern crate native_tls;
+extern crate failure;
 
 use imap::client::Client;
 use native_tls::{Pkcs12, TlsConnector};
 use std::fs::File;
 use std::io::Read;
+use std::collections::HashMap;
+
+type Result<T> = std::result::Result<T, failure::Error>;
 
 fn main() {
     dotenv::dotenv().expect("Could not load .env file");
@@ -57,15 +61,8 @@ fn main() {
         match imap_socket.fetch(&format!("{}", i), "RFC822") {
             Ok(messages) => {
                 for message in messages.iter() {
-                    match mailparse::parse_mail(message.rfc822().unwrap()) {
-                        Ok(msg) => {
-                            print_msg(&msg);
-                            println!();
-                        }
-                        Err(e) => {
-                            println!("Could not parse email: {}", e);
-                        }
-                    }
+                    let message = Message::from(message.rfc822().unwrap()).unwrap();
+                    println!("{:#?}", message);
                 }
             }
             Err(e) => println!("Error Fetching email: {}", e),
@@ -75,24 +72,37 @@ fn main() {
     imap_socket.logout().unwrap();
 }
 
-fn print_msg(msg: &mailparse::ParsedMail) {
-    for header in &msg.headers {
-        if let (Ok(key), Ok(value)) = (header.get_key(), header.get_value()) {
-            println!("{}: {}", key, value);
-        } else {
-            println!("Could not parse header");
-        }
-    }
-    if let Ok(body) = msg.get_body() {
-        println!();
-        println!("{}", body);
-    } else {
-        println!("(No body)");
-    }
-    println!("{:?}", msg.get_content_disposition());
-
-    for sub in &msg.subparts {
-        print_msg(sub);
-    }
+#[derive(Debug)]
+pub struct Message {
+    pub headers: HashMap<String, String>,
+    pub content: Vec<String>,
+    //pub raw: Vec<u8>,
 }
 
+impl Message {
+    pub fn from(raw: &[u8]) -> Result<Message> {
+        let parsed = mailparse::parse_mail(raw)?;
+        let mut message = Message {
+            headers: HashMap::new(),
+            content: Vec::new(),
+            //raw: raw.into(),
+        };
+        message.append(&parsed)?;
+        Ok(message)
+    }
+
+    fn append(&mut self, part: &mailparse::ParsedMail) -> Result<()> {
+        for header in &part.headers {
+            let key = header.get_key()?;
+            let value = header.get_value()?;
+            *self.headers.entry(key).or_insert_with(String::new) += &value;
+        }
+        if let Ok(body) = part.get_body() {
+            self.content.push(body);
+        }
+        for sub in &part.subparts {
+            self.append(sub)?;
+        }
+        Ok(())
+    }
+}
