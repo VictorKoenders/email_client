@@ -4,9 +4,18 @@ version = "0.1.0"
 authors = ["admin"]
 
 [dependencies]
-failure = "*"
-imap = "*"
-native-tls = "*"
-mailparse = "*"
-dotenv = "*"
+failure = "0.1.2"
+imap = "0.8.1"
+native-tls = "0.1.5" # dependant upon imap
+mailparse = "0.6.2"
+dotenv = "0.13.0"
+actix-web = "0.7.3"
+actix = "0.7.3"
 
+[dependencies.uuid]
+version = "0.6.5"
+features = ["serde"]
+
+[dependencies.diesel]
+version = "1.3.2"
+features = ["postgres", "uuid"]
