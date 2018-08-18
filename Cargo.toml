@@ -1,7 +1,7 @@
 [package]
+authors = ["admin"]
 name = "mail"
 version = "0.1.0"
-authors = ["admin"]
 
 [dependencies]
 failure = "0.1.2"

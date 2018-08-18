@@ -1,3 +1,5 @@
+extern crate actix;
+extern crate actix_web;
 extern crate dotenv;
 extern crate imap;
 extern crate mailparse;
@@ -7,8 +9,12 @@ extern crate failure;
 
 mod mail_reader;
 mod message;
+mod web;
 
-type Result<T> = std::result::Result<T, failure::Error>;
+use std::thread::sleep;
+use std::time::Duration;
+
+pub type Result<T> = std::result::Result<T, failure::Error>;
 
 fn main() {
     dotenv::dotenv().expect("Could not load .env file");
@@ -23,9 +29,8 @@ fn main() {
 
     let receiver = mail_reader::run(use_mock_mail_server);
 
-    while let Ok(msg) = receiver.recv() {
-        println!("{:?}", msg);
+    web::serve(receiver);
+    loop {
+        sleep(Duration::from_secs(5));
     }
-
-    println!("Done");
 }
