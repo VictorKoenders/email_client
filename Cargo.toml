@@ -1,12 +1,13 @@
 [package]
+authors = ["admin"]
 name = "mail"
 version = "0.1.0"
-authors = ["admin"]
 
 [dependencies]
+actix = "*"
+actix-web = "*"
+dotenv = "*"
 failure = "*"
 imap = "*"
-native-tls = "*"
 mailparse = "*"
-dotenv = "*"
-
+native-tls = "*"
