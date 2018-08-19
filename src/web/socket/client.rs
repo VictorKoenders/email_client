@@ -38,7 +38,7 @@ impl Actor for Client {
             .into_actor(self)
             .then(|res, _act, ctx| {
                 match res {
-                    Ok(res) => ctx.text(serde_json::to_string(&Init { init: res.0 }).unwrap()),
+                    Ok(Ok(res)) => ctx.text(serde_json::to_string(&Init { init: res.0 }).unwrap()),
                     _ => ctx.stop(),
                 }
                 fut::ok(())
@@ -76,31 +76,31 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                     }
                 };
                 if let Value::Object(d) = &data["load_inbox"] {
-                    if let (Some(Value::String(short_name)), Some(Value::String(mail_address))) =
-                        (d.get("short_name"), d.get("mail_address"))
-                    {
-                        self.open_inbox = Some(mail_address.clone());
-                        ctx.state()
-                            .database
-                            .send(LoadInbox(Address::new(
-                                short_name.clone(),
-                                mail_address.clone(),
-                            ))).into_actor(self)
-                            .then(|res, _act, ctx| {
-                                match res {
-                                    Ok(res) => {
-                                        ctx.text(
-                                            serde_json::to_string(&InboxLoaded {
-                                                inbox_loaded: res,
-                                            }).unwrap(),
-                                        );
-                                    }
-                                    _ => ctx.stop(),
+                    let address: Address = match serde_json::from_value(Value::Object(d.clone())) {
+                        Ok(a) => a,
+                        Err(e) => {
+                            println!("Could not parse json from client. {:?}", e);
+                            return;
+                        }
+                    };
+                    self.open_inbox = Some(address.mail_address.clone());
+                    ctx.state()
+                        .database
+                        .send(LoadInbox(address))
+                        .into_actor(self)
+                        .then(|res, _act, ctx| {
+                            match res {
+                                Ok(Ok(res)) => {
+                                    ctx.text(
+                                        serde_json::to_string(&InboxLoaded { inbox_loaded: res })
+                                            .unwrap(),
+                                    );
                                 }
-                                fut::ok(())
-                            }).wait(ctx);
-                        return;
-                    }
+                                _ => ctx.stop(),
+                            }
+                            fut::ok(())
+                        }).wait(ctx);
+                    return;
                 }
                 println!("Unknown json from websocket client {:?}", text);
             }
@@ -121,11 +121,14 @@ impl Handler<ImapMessage> for Client {
     fn handle(&mut self, msg: ImapMessage, context: &mut Self::Context) {
         match msg {
             ImapMessage::NewMessage(msg) => {
-                if self.open_inbox == msg.to {
-                    context.text(serde_json::to_string(&msg).unwrap());
-                } else if self.open_inbox.as_ref().map(|s| s.as_str()) == Some("*@trangar.com") {
+                if self.open_inbox == msg.to
+                    || self.open_inbox.as_ref().map(|s| s.as_str()) == Some("*@trangar.com")
+                {
                     // TODO: Check if any mailbox is listening to the incoming message
-                    context.text(serde_json::to_string(&msg).unwrap());
+                    context.text(format!(
+                        "{{\"email_received\":{}}}",
+                        serde_json::to_string(&msg).unwrap()
+                    ));
                 }
             }
         }

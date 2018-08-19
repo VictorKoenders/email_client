@@ -8,6 +8,7 @@ interface Props {
     addresses: server.Address[];
     emails: server.Email[];
     active_address: server.Address | null;
+    active_email: server.Email | null;
     onAddressSelected: (addr: server.Address) => void;
     onEmailSelected: (email: server.Email) => void;
 }
@@ -50,7 +51,7 @@ export class Menu extends React.Component<Props, State> {
 
     render_address(address: server.Address, index: number) {
         return <li key={index} onClick={this.select_address.bind(this, address)}
-            className={this.props.active_address && this.props.active_address.short_name == address.short_name ? "active": ""}>
+            className={this.props.active_address && this.props.active_address.id == address.id ? "active": ""}>
             <small className="subtext">{address.email_address}</small>
             {address.unseen_count > 0
                 ? <b>{address.short_name} ({address.unseen_count})</b>
@@ -60,7 +61,8 @@ export class Menu extends React.Component<Props, State> {
     }
 
     render_email(email: server.Email, index: number) {
-        return <li key={index} onClick={this.select_email.bind(this, email)}>
+        return <li key={index} onClick={this.select_email.bind(this, email)}
+            className={this.props.active_email && this.props.active_email.id == email.id ? "active":""}>
         {email.seen
             ? email.from
             : <b>{email.from} *</b>}

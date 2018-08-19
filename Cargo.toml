@@ -6,21 +6,23 @@ version = "0.1.0"
 [dependencies]
 actix = "0.7.3"
 actix-web = "0.7.3"
-futures = "0.1.23" # dependant on actix
+futures = "0.1.23" # dependent on actix
 
 dotenv = "0.13.0"
 failure = "0.1.2"
 imap = "0.8.1"
 mailparse = "0.6.2"
-native-tls = "0.1.5" # dependant on mailparse
+native-tls = "0.1.5" # dependent on mailparse
 serde = "1.0.71"
 serde_derive = "1.0.71"
 serde_json = "1.0.26"
+r2d2 = "0.8.2"
+r2d2_postgres = "0.14.0"
 
-[dependencies.diesel]
-features = ["postgres", "uuid"]
-version = "1.3.2"
+[dependencies.postgres]
+version = "0.15.2"
+features = ["with-uuid"]
 
 [dependencies.uuid]
 features = ["serde"]
-version = "0.6.5"
+version = "0.5.1" # dependent on postgres

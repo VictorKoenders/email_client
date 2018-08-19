@@ -47,5 +47,9 @@ impl Handler<Disconnect> for Server {
 
 impl Handler<ImapMessage> for Server {
     type Result = ();
-    fn handle(&mut self, _msg: ImapMessage, _ctx: &mut Context<Self>) -> () {}
+    fn handle(&mut self, msg: ImapMessage, _ctx: &mut Context<Self>) {
+        for client in self.clients.values() {
+            client.do_send(msg.clone());
+        }
+    }
 }

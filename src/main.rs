@@ -10,10 +10,11 @@ extern crate failure;
 extern crate futures;
 #[macro_use]
 extern crate serde_derive;
+extern crate postgres;
+extern crate r2d2;
+extern crate r2d2_postgres;
 extern crate serde;
 extern crate serde_json;
-#[macro_use]
-extern crate diesel;
 extern crate uuid;
 
 mod data;

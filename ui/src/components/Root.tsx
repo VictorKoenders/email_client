@@ -78,6 +78,7 @@ export class Root extends React.Component<Props, State> {
                           onAddressSelected={this.select_address.bind(this)}
                           onEmailSelected={this.select_email.bind(this)}
                           active_address={this.state.current_address}
+                          active_email={this.state.current_email}
                           />
                 </div>
                 <div className="col-md-8">

@@ -1,10 +1,12 @@
-use super::{Address, Email, ListAddressResult, ListAddresses, LoadInbox, LoadInboxResponse};
+use super::{executor::Executor, ListAddressResult, ListAddresses, LoadInbox, LoadInboxResponse};
 use actix::{Actor, ArbiterService, Context, Handler, Supervised};
 use mail_reader::ImapMessage;
-use uuid::Uuid;
+use Result;
 
 #[derive(Default)]
-pub struct Database {}
+pub struct Database {
+    executor: Executor,
+}
 
 impl Actor for Database {
     type Context = Context<Self>;
@@ -15,59 +17,27 @@ impl Handler<ImapMessage> for Database {
 }
 
 impl Handler<ListAddresses> for Database {
-    type Result = ListAddressResult;
+    type Result = Result<ListAddressResult>;
     fn handle(
         &mut self,
         _message: ListAddresses,
         _context: &mut Self::Context,
-    ) -> ListAddressResult {
-        ListAddressResult(vec![
-            Address {
-                id: Uuid::nil(),
-                short_name: String::from("Catch-all"),
-                mail_address: String::from("*@trangar.com"),
-                unseen_count: 1,
-            },
-            Address {
-                id: Uuid::nil(),
-                short_name: String::from("LinkedIn"),
-                mail_address: String::from("linkedin@trangar.com"),
-                unseen_count: 0,
-            },
-            Address {
-                id: Uuid::nil(),
-                short_name: String::from("Twitter"),
-                mail_address: String::from("twitter@trangar.com"),
-                unseen_count: 0,
-            },
-        ])
+    ) -> Result<ListAddressResult> {
+        let addresses = self.executor.load_addresses()?;
+        Ok(ListAddressResult(addresses))
     }
 }
 impl Handler<LoadInbox> for Database {
-    type Result = LoadInboxResponse;
+    type Result = Result<LoadInboxResponse>;
 
-    fn handle(&mut self, msg: LoadInbox, _ctx: &mut Self::Context) -> LoadInboxResponse {
-        let emails = match msg.0.mail_address.as_str() {
-            "*@trangar.com" => vec![Email {
-                from: String::from("victor.koenders@gmail.com"),
-                to: String::from("butts@trangar.com"),
-                subject: String::from("Hahaha butts"),
-                body: String::from("I'm so funny"),
-                seen: false,
-            }],
-            "linkedin@trangar.com" => vec![Email {
-                from: String::from("no-reply@linkedin.com"),
-                to: String::from("linkedin@trangar.com"),
-                subject: String::from("Spam from linkedin"),
-                body: String::from("This is spam"),
-                seen: true,
-            }],
-            _ => Vec::new(),
+    fn handle(&mut self, msg: LoadInbox, _ctx: &mut Self::Context) -> Result<LoadInboxResponse> {
+        let address = match self.executor.load_address_by_id(&msg.0.id) {
+            Ok(Some(a)) => a,
+            Ok(None) => bail!("Inbox not found: {:?}", msg.0),
+            Err(e) => return Err(e),
         };
-        LoadInboxResponse {
-            address: msg.0,
-            emails,
-        }
+        let emails = self.executor.load_emails_by_address(&address.id)?;
+        Ok(LoadInboxResponse { address, emails })
     }
 }
 

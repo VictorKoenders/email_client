@@ -49,8 +49,8 @@ impl Default for EmailParser {
         let imap_password = env::var("IMAP_PASSWORD").expect("Missing env var IMAP_PASSWORD");
         let socket_addr = format!("{}:{}", imap_host, imap_port);
 
-        let mut file =
-            File::open(&imap_pfx_file).expect(&format!("Could not open file {:?}", imap_pfx_file));
+        let mut file = File::open(&imap_pfx_file)
+            .unwrap_or_else(|e| panic!("Could not open file {:?}: {}", imap_pfx_file, e));
         let mut identity = vec![];
         file.read_to_end(&mut identity)
             .expect("Could not read pfx file");
@@ -91,7 +91,7 @@ impl Supervised for EmailParser {
         println!("[EmailParser] Restarting");
         let socket_addr = format!("{}:{}", self.imap_host, self.imap_port);
         let mut file = File::open(&self.imap_pfx_file)
-            .expect(&format!("Could not open file {:?}", self.imap_pfx_file));
+            .unwrap_or_else(|e| panic!("Could not open file {:?}: {}", self.imap_pfx_file, e));
         let mut identity = vec![];
         file.read_to_end(&mut identity)
             .expect("Could not read pfx file");

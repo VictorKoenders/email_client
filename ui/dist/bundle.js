@@ -157,7 +157,7 @@ class Menu extends React.Component {
         return false;
     }
     render_address(address, index) {
-        return React.createElement("li", { key: index, onClick: this.select_address.bind(this, address), className: this.props.active_address && this.props.active_address.short_name == address.short_name ? "active" : "" },
+        return React.createElement("li", { key: index, onClick: this.select_address.bind(this, address), className: this.props.active_address && this.props.active_address.id == address.id ? "active" : "" },
             React.createElement("small", { className: "subtext" }, address.email_address),
             address.unseen_count > 0
                 ? React.createElement("b", null,
@@ -169,7 +169,7 @@ class Menu extends React.Component {
             React.createElement("br", null));
     }
     render_email(email, index) {
-        return React.createElement("li", { key: index, onClick: this.select_email.bind(this, email) },
+        return React.createElement("li", { key: index, onClick: this.select_email.bind(this, email), className: this.props.active_email && this.props.active_email.id == email.id ? "active" : "" },
             email.seen
                 ? email.from
                 : React.createElement("b", null,
@@ -259,7 +259,7 @@ class Root extends React.Component {
         return React.createElement("div", { className: "container" },
             React.createElement("div", { className: "row" },
                 React.createElement("div", { className: "col-md-4" },
-                    React.createElement(Menu_1.Menu, { addresses: this.state.addresses, emails: this.state.emails, onAddressSelected: this.select_address.bind(this), onEmailSelected: this.select_email.bind(this), active_address: this.state.current_address })),
+                    React.createElement(Menu_1.Menu, { addresses: this.state.addresses, emails: this.state.emails, onAddressSelected: this.select_address.bind(this), onEmailSelected: this.select_email.bind(this), active_address: this.state.current_address, active_email: this.state.current_email })),
                 React.createElement("div", { className: "col-md-8" }, this.state.current_email ? React.createElement(MailRenderer_1.MailRenderer, Object.assign({}, this.state.current_email)) : null)));
     }
 }
