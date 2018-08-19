@@ -205,32 +205,40 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const React = __webpack_require__(/*! react */ "react");
 const Menu_1 = __webpack_require__(/*! ./Menu */ "./src/components/Menu.tsx");
 const MailRenderer_1 = __webpack_require__(/*! ./MailRenderer */ "./src/components/MailRenderer.tsx");
+const websocket_1 = __webpack_require__(/*! ../websocket */ "./src/websocket.ts");
 class Root extends React.Component {
     constructor(props, context) {
         super(props, context);
         this.state = {
-            addresses: [
-                { short_name: "Catch-all", email_address: "*@trangar.com", unseen_count: 1 },
-                { short_name: "LinkedIn", email_address: "linkedin@trangar.com", unseen_count: 1 },
-                { short_name: "Twitter", email_address: "twitter@trangar.com", unseen_count: 1 },
-                { short_name: "Amazon", email_address: "amazon@trangar.com", unseen_count: 0 }
-            ],
-            emails: {
-                "linkedin@trangar.com": [
-                    { from: "no-reply@linkedin.com", to: "linkedin@trangar.com", subject: "Hello", body: ["This is spam"], seen: false },
-                ],
-                "*@trangar.com": [
-                    { from: "no-reply@butts.com", to: "butts@trangar.com", subject: "Hahaha", body: ["Butts"], seen: false },
-                ],
-                "twitter@trangar.com": [
-                    { from: "no-reply@twitter.com", to: "twitter@trangar.com", subject: "Someone like your tweet", body: ["You're so funny and witty"], seen: false },
-                ]
-            },
+            addresses: [],
+            emails: [],
             current_address: null,
             current_email: null,
+            handler: new websocket_1.Handler(this),
         };
     }
+    email_received(email) {
+        this.setState(state => {
+            let emails = state.emails.slice();
+            emails.splice(0, 0, email);
+            return { emails };
+        });
+    }
+    inbox_loaded(address, emails) {
+        this.setState(state => {
+            if (state.current_address && state.current_address.short_name == address.short_name) {
+                return { emails };
+            }
+            else {
+                return {};
+            }
+        });
+    }
+    setup(addresses) {
+        this.setState({ addresses });
+    }
     select_address(address) {
+        this.state.handler.load_inbox(address);
         this.setState({
             current_address: address
         });
@@ -248,14 +256,10 @@ class Root extends React.Component {
     }
     render() {
         let emails = [];
-        if (this.state.current_address && this.state.current_address.short_name &&
-            Array.isArray(this.state.emails[this.state.current_address.email_address])) {
-            emails = this.state.emails[this.state.current_address.email_address];
-        }
         return React.createElement("div", { className: "container" },
             React.createElement("div", { className: "row" },
                 React.createElement("div", { className: "col-md-4" },
-                    React.createElement(Menu_1.Menu, { addresses: this.state.addresses, emails: emails, onAddressSelected: this.select_address.bind(this), onEmailSelected: this.select_email.bind(this), active_address: this.state.current_address })),
+                    React.createElement(Menu_1.Menu, { addresses: this.state.addresses, emails: this.state.emails, onAddressSelected: this.select_address.bind(this), onEmailSelected: this.select_email.bind(this), active_address: this.state.current_address })),
                 React.createElement("div", { className: "col-md-8" }, this.state.current_email ? React.createElement(MailRenderer_1.MailRenderer, Object.assign({}, this.state.current_email)) : null)));
     }
 }
@@ -278,6 +282,77 @@ const React = __webpack_require__(/*! react */ "react");
 const ReactDOM = __webpack_require__(/*! react-dom */ "react-dom");
 const Root_1 = __webpack_require__(/*! ./components/Root */ "./src/components/Root.tsx");
 ReactDOM.render(React.createElement(Root_1.Root, null), document.getElementById("example"));
+
+
+/***/ }),
+
+/***/ "./src/websocket.ts":
+/*!**************************!*\
+  !*** ./src/websocket.ts ***!
+  \**************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+class Handler {
+    constructor(handler) {
+        this.socket = null;
+        this.reconnect_timeout = null;
+        this.handler = handler;
+        this.current_inbox = null;
+        this.connect();
+    }
+    load_inbox(address) {
+        if (this.socket) {
+            this.socket.send(JSON.stringify({
+                load_inbox: address
+            }));
+        }
+        this.current_inbox = address;
+    }
+    connect() {
+        this.socket = new WebSocket("ws://" + document.location.host + "/ws/");
+        this.socket.onopen = this.onopen.bind(this);
+        this.socket.onclose = this.onclose.bind(this);
+        this.socket.onerror = this.onerror.bind(this);
+        this.socket.onmessage = this.onmessage.bind(this);
+    }
+    onopen(ev) {
+    }
+    onclose(ev) {
+        this.socket = null;
+        if (this.reconnect_timeout) {
+            clearTimeout(this.reconnect_timeout);
+        }
+        this.reconnect_timeout = setTimeout(() => {
+            this.connect();
+        }, 5000);
+    }
+    onerror(ev) {
+        console.error("[Websocket]", ev);
+    }
+    onmessage(ev) {
+        let json = JSON.parse(ev.data);
+        if (json.init) {
+            this.handler.setup(json.init);
+            if (this.current_inbox) {
+                this.load_inbox(this.current_inbox);
+            }
+        }
+        else if (json.email_received) {
+            this.handler.email_received(json.email_received);
+        }
+        else if (json.inbox_loaded) {
+            this.handler.inbox_loaded(json.inbox_loaded.address, json.inbox_loaded.emails);
+        }
+        else {
+            console.log("Unknown server message", json);
+        }
+    }
+}
+exports.Handler = Handler;
 
 
 /***/ }),

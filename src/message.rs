@@ -1,41 +1,44 @@
+use failure::ResultExt;
+use mailparse::{parse_mail, ParsedMail};
 use std::collections::HashMap;
 use Result;
-use mailparse::{parse_mail, ParsedMail};
-use failure::ResultExt;
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Message {
     pub headers: HashMap<String, String>,
     pub content: Vec<String>,
     pub from: Option<String>,
     pub to: Option<String>,
     pub subject: Option<String>,
-    //pub raw: Vec<u8>,
+    #[serde(skip_serializing)]
+    pub raw: Vec<u8>,
 }
 
 impl Message {
     pub fn mock() -> Message {
         Message {
             headers: HashMap::new(),
-            content: vec![
-                String::from("This is a mock message")
-            ],
+            content: vec![String::from("This is a mock message")],
             from: Some(String::from("test@trangar.com")),
             to: Some(String::from("butts@trangar.com")),
             subject: Some(String::from("This is a mock title")),
+            raw: Vec::new(),
         }
     }
     pub fn from(raw: &[u8]) -> Result<Message> {
-        let parsed = parse_mail(raw).with_context(|e| format!("Could not parse raw mail message: {}\n{:?}", e, raw))?;
+        let parsed = parse_mail(raw)
+            .with_context(|e| format!("Could not parse raw mail message: {}\n{:?}", e, raw))?;
         let mut message = Message {
             headers: HashMap::new(),
             content: Vec::new(),
             from: None,
             to: None,
             subject: None,
-            //raw: raw.into(),
+            raw: raw.into(),
         };
-        message.append(&parsed).with_context(|e| format!("Could not convert mail message: {}\n{:?}", e, raw))?;
+        message
+            .append(&parsed)
+            .with_context(|e| format!("Could not convert mail message: {}\n{:?}", e, raw))?;
         Ok(message)
     }
 

@@ -1,12 +1,14 @@
 import * as React from "react";
 import { Menu } from "./Menu";
 import { MailRenderer } from "./MailRenderer";
+import { Handler } from "../websocket";
 
 interface State {
     addresses: server.Address[];
-    emails: {[key: string]: server.Email[]};
+    emails: server.Email[];
     current_address: server.Address | null;
     current_email: server.Email | null;
+    handler: Handler;
 }
 
 interface Props {
@@ -17,28 +19,38 @@ export class Root extends React.Component<Props, State> {
         super(props, context);
         this.state = {
             addresses: [
-                { short_name: "Catch-all", email_address: "*@trangar.com", unseen_count: 1 },
-                { short_name: "LinkedIn", email_address: "linkedin@trangar.com", unseen_count: 1 },
-                { short_name: "Twitter", email_address: "twitter@trangar.com", unseen_count: 1 },
-                { short_name: "Amazon", email_address: "amazon@trangar.com", unseen_count: 0 }
             ],
-            emails: {
-                "linkedin@trangar.com": [
-                    { from: "no-reply@linkedin.com", to: "linkedin@trangar.com", subject: "Hello", body: ["This is spam"], seen: false},
-                ],
-                "*@trangar.com": [
-                    { from: "no-reply@butts.com", to: "butts@trangar.com", subject: "Hahaha", body: ["Butts"], seen: false},
-                ],
-                "twitter@trangar.com": [
-                    { from: "no-reply@twitter.com", to: "twitter@trangar.com", subject: "Someone like your tweet", body: ["You're so funny and witty"], seen: false},
-                ]
-            },
+            emails: [],
             current_address: null,
             current_email: null,
+            handler: new Handler(this),
         };
     }
 
+    email_received(email: server.Email) {
+        this.setState(state => {
+            let emails = state.emails.slice();
+            emails.splice(0, 0, email);
+            return { emails };
+        });
+    }
+
+    inbox_loaded(address: server.Address, emails: server.Email[]) {
+        this.setState(state => {
+            if(state.current_address && state.current_address.short_name == address.short_name) {
+                return { emails } as any;
+            } else {
+                return {};
+            }
+        });
+    }
+
+    setup(addresses: server.Address[]) {
+        this.setState({ addresses });
+    }
+
     select_address(address: server.Address) {
+        this.state.handler.load_inbox(address);
         this.setState({
             current_address: address
         });
@@ -58,15 +70,11 @@ export class Root extends React.Component<Props, State> {
 
     render() {
         let emails: server.Email[] = [];
-        if(this.state.current_address && this.state.current_address.short_name &&
-            Array.isArray(this.state.emails[this.state.current_address.email_address])){
-            emails = this.state.emails[this.state.current_address.email_address];
-        }
         return <div className="container">
             <div className="row">
                 <div className="col-md-4">
                     <Menu addresses={this.state.addresses}
-                          emails={emails}
+                          emails={this.state.emails}
                           onAddressSelected={this.select_address.bind(this)}
                           onEmailSelected={this.select_email.bind(this)}
                           active_address={this.state.current_address}
