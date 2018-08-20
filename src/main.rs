@@ -10,6 +10,7 @@ extern crate failure;
 extern crate futures;
 #[macro_use]
 extern crate serde_derive;
+extern crate chrono;
 extern crate postgres;
 extern crate r2d2;
 extern crate r2d2_postgres;
@@ -42,13 +43,17 @@ fn main() {
     let ws_server = web::WebsocketServer::start_service();
     let database = data::Database::start_service();
 
-    mail_reader::run(
-        ws_server.clone(),
-        database.clone(),
-        &runner,
-        use_mock_mail_server,
-    );
-    web::serve(ws_server.clone(), database.clone());
+    {
+        let recipient = ws_server.clone().recipient();
+        database
+            .clone()
+            .recipient()
+            .do_send(data::AddNewEmailListener(recipient))
+            .expect("Could not register ws server to database");
+    }
+
+    mail_reader::run(database.clone(), &runner, use_mock_mail_server);
+    web::serve(ws_server, database);
 
     runner.run();
 }

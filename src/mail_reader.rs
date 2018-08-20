@@ -11,7 +11,6 @@ use std::fs::File;
 use std::io::Read;
 use std::str;
 use std::time::Duration;
-use web::WebsocketServer;
 use Result;
 
 pub type Client = ::imap::client::Client<::native_tls::TlsStream<::std::net::TcpStream>>;
@@ -122,12 +121,10 @@ impl ArbiterService for EmailParser {
     }
 }
 
-impl Handler<Initialize> for EmailParser {
+impl Handler<AddListener> for EmailParser {
     type Result = ();
-    fn handle(&mut self, msg: Initialize, _context: &mut Self::Context) {
-        self.message_recipients
-            .push(msg.websocket_server.recipient());
-        self.message_recipients.push(msg.database.recipient());
+    fn handle(&mut self, msg: AddListener, _context: &mut Self::Context) {
+        self.message_recipients.push(msg.0);
     }
 }
 
@@ -156,7 +153,7 @@ impl EmailParser {
             for message in messages.iter() {
                 if let Some(rfc822) = message.rfc822() {
                     let message = ImapMessage::NewMessage(
-                        Message::from(&rfc822).context("Could not parse Message")?,
+                        Message::from(rfc822).context("Could not parse Message")?,
                     );
                     for recipient in &self.message_recipients {
                         recipient
@@ -200,12 +197,10 @@ impl ArbiterService for MockParser {
     }
 }
 
-impl Handler<Initialize> for MockParser {
+impl Handler<AddListener> for MockParser {
     type Result = ();
-    fn handle(&mut self, msg: Initialize, _context: &mut Self::Context) {
-        self.message_recipients
-            .push(msg.websocket_server.recipient());
-        self.message_recipients.push(msg.database.recipient());
+    fn handle(&mut self, msg: AddListener, _context: &mut Self::Context) {
+        self.message_recipients.push(msg.0);
     }
 }
 
@@ -221,29 +216,15 @@ impl MockParser {
     }
 }
 
-pub fn run(
-    websocket_server: Addr<WebsocketServer>,
-    database: Addr<Database>,
-    _system: &SystemRunner,
-    run_mock: bool,
-) {
+pub fn run(database: Addr<Database>, _system: &SystemRunner, run_mock: bool) {
     if run_mock {
         let addr = MockParser::start_service();
-        addr.do_send(Initialize {
-            websocket_server,
-            database,
-        });
+        addr.do_send(AddListener(database.recipient()));
     } else {
         let addr = EmailParser::start_service();
-        addr.do_send(Initialize {
-            websocket_server,
-            database,
-        });
+        addr.do_send(AddListener(database.recipient()));
     }
 }
 
 #[derive(Message)]
-struct Initialize {
-    websocket_server: Addr<WebsocketServer>,
-    database: Addr<Database>,
-}
+struct AddListener(pub Recipient<ImapMessage>);

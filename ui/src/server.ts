@@ -8,6 +8,7 @@ namespace server {
 
     export interface Email {
         id: string;
+        address_id: string;
         created_on: string;
         from: string | null;
         to: string | null;

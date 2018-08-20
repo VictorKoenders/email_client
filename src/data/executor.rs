@@ -1,4 +1,5 @@
 use super::{Address, Email};
+use message::Message;
 use r2d2::Pool;
 use r2d2_postgres::{PostgresConnectionManager, TlsMode};
 use std::env;
@@ -26,7 +27,17 @@ macro_rules! ADDRESS_ORDER {
 }
 macro_rules! EMAIL_SELECT {
     () => {
-        "SELECT id, created_on, 'from', 'to', subject, body, read FROM email"
+        "SELECT id, address_id, created_on, \"from\", \"to\", subject, body, read FROM email"
+    };
+}
+macro_rules! EMAIL_INSERT {
+    () => {
+        "INSERT INTO email (address_id, \"from\", \"to\", subject, body, raw) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_on"
+    };
+}
+macro_rules! EMAIL_VALUES {
+    (address_id: $address_id:expr, from: $from:expr, to: $to:expr, subject: $subject:expr, body: $body:expr, raw: $raw:expr) => {
+        &[$address_id, $from, $to, $subject, $body, $raw]
     };
 }
 macro_rules! EMAIL_ORDER {
@@ -54,10 +65,66 @@ impl Executor {
         }
     }
 
+    pub fn load_address_by_email_address(&self, email_address: &str) -> Result<Option<Address>> {
+        let connection = self.0.get()?;
+        const QUERY: &str = concat!(ADDRESS_SELECT!(), " where email_address = $1");
+        let result = connection.query(QUERY, &[&email_address])?;
+        if result.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(result.into_iter().next().unwrap().into()))
+        }
+    }
     pub fn load_emails_by_address(&self, id: &Uuid) -> Result<Vec<Email>> {
         let connection = self.0.get()?;
         const QUERY: &str = concat!(EMAIL_SELECT!(), " where address_id = $1 ", EMAIL_ORDER!());
         let result = connection.query(QUERY, &[id])?;
         Ok(result.into_iter().map(Into::into).collect())
+    }
+
+    pub fn save(&self, message: Message) -> Result<Email> {
+        let from: String = message.from.unwrap_or_else(String::new);
+        let to: String = message.to.unwrap_or_else(String::new);
+        let subject: String = message.subject.unwrap_or_else(String::new);
+        let body: String = message.content.join("\n---\n");
+
+        let connection = self.0.get()?;
+        let address = self.load_address_by_email_address(&to)?;
+        let address_id: Uuid = address.map(|a| a.id).unwrap_or_else(Uuid::nil);
+
+        const QUERY: &str = EMAIL_INSERT!();
+        let result = connection.query(
+            QUERY,
+            EMAIL_VALUES!(
+                address_id: &address_id,
+                from: &from,
+                to: &to,
+                subject: &subject,
+                body: &body,
+                raw: &message.raw
+            ),
+        )?;
+
+        let (id, created_on) = match result
+            .into_iter()
+            .next()
+            .map(|rows| (rows.get(0), rows.get(1)))
+        {
+            Some(r) => r,
+            None => bail!("Failed to retrieve ID and created_on from insert query"),
+        };
+
+        let email = Email {
+            id,
+            address_id,
+            created_on,
+            from,
+            to,
+            subject,
+            body,
+            seen: false,
+        };
+
+        Ok(email)
     }
 }

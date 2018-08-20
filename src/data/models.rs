@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use postgres::rows::Row;
 use uuid::Uuid;
 
@@ -26,10 +27,11 @@ impl<'a> From<Row<'a>> for Address {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Email {
     pub id: Uuid,
-    pub created_on: String,
+    pub address_id: Uuid,
+    pub created_on: DateTime<Utc>,
     pub from: String,
     pub to: String,
     pub subject: String,
@@ -40,14 +42,16 @@ pub struct Email {
 impl<'a> From<Row<'a>> for Email {
     fn from(row: Row) -> Email {
         let id = row.get(0);
-        let created_on = row.get(1);
-        let from = row.get(2);
-        let to = row.get(3);
-        let subject = row.get(4);
-        let body = row.get(5);
-        let seen = row.get(6);
+        let address_id = row.get(1);
+        let created_on = row.get(2);
+        let from = row.get(3);
+        let to = row.get(4);
+        let subject = row.get(5);
+        let body = row.get(6);
+        let seen = row.get(7);
         Email {
             id,
+            address_id,
             created_on,
             from,
             to,

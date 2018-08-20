@@ -1,19 +1,49 @@
-use super::{executor::Executor, ListAddressResult, ListAddresses, LoadInbox, LoadInboxResponse};
-use actix::{Actor, ArbiterService, Context, Handler, Supervised};
+use super::{
+    executor::Executor, Email, ListAddressResult, ListAddresses, LoadInbox, LoadInboxResponse,
+};
+use actix::{Actor, ArbiterService, Context, Handler, Recipient, Supervised};
 use mail_reader::ImapMessage;
 use Result;
 
 #[derive(Default)]
 pub struct Database {
     executor: Executor,
+    listeners: Vec<Recipient<NewEmail>>,
 }
+
+#[derive(Message)]
+pub struct AddNewEmailListener(pub Recipient<NewEmail>);
+
+impl Handler<AddNewEmailListener> for Database {
+    type Result = ();
+    fn handle(&mut self, message: AddNewEmailListener, _context: &mut Self::Context) {
+        self.listeners.push(message.0);
+    }
+}
+
+#[derive(Message, Clone)]
+pub struct NewEmail(pub Email);
 
 impl Actor for Database {
     type Context = Context<Self>;
 }
 impl Handler<ImapMessage> for Database {
     type Result = ();
-    fn handle(&mut self, _message: ImapMessage, _context: &mut Self::Context) {}
+    fn handle(&mut self, message: ImapMessage, _context: &mut Self::Context) {
+        match message {
+            ImapMessage::NewMessage(message) => {
+                let email = self
+                    .executor
+                    .save(message)
+                    .expect("[Database] Could not save email");
+                for listener in &self.listeners {
+                    listener
+                        .do_send(NewEmail(email.clone()))
+                        .expect("[Database] Could not send email to listener");
+                }
+            }
+        }
+    }
 }
 
 impl Handler<ListAddresses> for Database {

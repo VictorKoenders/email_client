@@ -1,6 +1,6 @@
 use super::{Client, Connect, Disconnect};
 use actix::{Actor, Addr, ArbiterService, Context, Handler, Supervised};
-use mail_reader::ImapMessage;
+use data::NewEmail;
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -45,9 +45,9 @@ impl Handler<Disconnect> for Server {
     }
 }
 
-impl Handler<ImapMessage> for Server {
+impl Handler<NewEmail> for Server {
     type Result = ();
-    fn handle(&mut self, msg: ImapMessage, _ctx: &mut Context<Self>) {
+    fn handle(&mut self, msg: NewEmail, _ctx: &mut Context<Self>) {
         for client in self.clients.values() {
             client.do_send(msg.clone());
         }

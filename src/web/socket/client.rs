@@ -4,15 +4,13 @@ use actix::{
     StreamHandler, WrapFuture,
 };
 use actix_web::ws;
-use data::{Address, ListAddresses, LoadInbox, LoadInboxResponse};
-use mail_reader::ImapMessage;
+use data::{Address, Email, ListAddresses, LoadInbox, LoadInboxResponse, NewEmail};
 use serde_json::{self, Value};
 use web::State as ServerState;
 
 #[derive(Default)]
 pub struct Client {
     id: usize,
-    open_inbox: Option<String>,
 }
 
 impl Actor for Client {
@@ -36,9 +34,9 @@ impl Actor for Client {
             .database
             .send(ListAddresses)
             .into_actor(self)
-            .then(|res, _act, ctx| {
+            .then(|res, act, ctx| {
                 match res {
-                    Ok(Ok(res)) => ctx.text(serde_json::to_string(&Init { init: res.0 }).unwrap()),
+                    Ok(Ok(res)) => act.send_init(ctx, res.0),
                     _ => ctx.stop(),
                 }
                 fut::ok(())
@@ -53,6 +51,26 @@ impl Actor for Client {
     }
 }
 
+impl Client {
+    fn send_new_email(
+        &self,
+        context: &mut ws::WebsocketContext<Self, ServerState>,
+        email_received: Email,
+    ) {
+        context.text(serde_json::to_string(&EmailReceived { email_received }).unwrap());
+    }
+    fn send_inbox_loaded(
+        &self,
+        context: &mut ws::WebsocketContext<Self, ServerState>,
+        inbox_loaded: LoadInboxResponse,
+    ) {
+        context.text(serde_json::to_string(&InboxLoaded { inbox_loaded }).unwrap());
+    }
+    fn send_init(&self, context: &mut ws::WebsocketContext<Self, ServerState>, init: Vec<Address>) {
+        context.text(serde_json::to_string(&Init { init }).unwrap());
+    }
+}
+
 #[derive(Serialize)]
 struct Init {
     pub init: Vec<Address>,
@@ -61,6 +79,11 @@ struct Init {
 #[derive(Serialize)]
 struct InboxLoaded {
     pub inbox_loaded: LoadInboxResponse,
+}
+
+#[derive(Serialize)]
+struct EmailReceived {
+    pub email_received: Email,
 }
 
 impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
@@ -83,18 +106,14 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                             return;
                         }
                     };
-                    self.open_inbox = Some(address.mail_address.clone());
                     ctx.state()
                         .database
                         .send(LoadInbox(address))
                         .into_actor(self)
-                        .then(|res, _act, ctx| {
+                        .then(|res, act, ctx| {
                             match res {
                                 Ok(Ok(res)) => {
-                                    ctx.text(
-                                        serde_json::to_string(&InboxLoaded { inbox_loaded: res })
-                                            .unwrap(),
-                                    );
+                                    act.send_inbox_loaded(ctx, res);
                                 }
                                 _ => ctx.stop(),
                             }
@@ -116,21 +135,9 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
     }
 }
 
-impl Handler<ImapMessage> for Client {
+impl Handler<NewEmail> for Client {
     type Result = ();
-    fn handle(&mut self, msg: ImapMessage, context: &mut Self::Context) {
-        match msg {
-            ImapMessage::NewMessage(msg) => {
-                if self.open_inbox == msg.to
-                    || self.open_inbox.as_ref().map(|s| s.as_str()) == Some("*@trangar.com")
-                {
-                    // TODO: Check if any mailbox is listening to the incoming message
-                    context.text(format!(
-                        "{{\"email_received\":{}}}",
-                        serde_json::to_string(&msg).unwrap()
-                    ));
-                }
-            }
-        }
+    fn handle(&mut self, msg: NewEmail, context: &mut Self::Context) {
+        self.send_new_email(context, msg.0);
     }
 }

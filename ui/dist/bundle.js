@@ -220,8 +220,19 @@ class Root extends React.Component {
     email_received(email) {
         this.setState(state => {
             let emails = state.emails.slice();
-            emails.splice(0, 0, email);
-            return { emails };
+            let addresses = state.addresses.slice();
+            let address = addresses.find(a => a.id == email.address_id);
+            if (address) {
+                address.unseen_count++;
+            }
+            let current_address = state.current_address;
+            if (current_address && current_address.id == email.address_id) {
+                current_address.unseen_count++;
+                if (email.address_id == current_address.id) {
+                    emails.splice(0, 0, email);
+                }
+            }
+            return { emails, current_address, addresses };
         });
     }
     inbox_loaded(address, emails) {

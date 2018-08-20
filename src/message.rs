@@ -6,35 +6,35 @@ use Result;
 #[derive(Clone, Debug, Serialize)]
 pub struct Message {
     pub headers: HashMap<String, String>,
-    pub content: Vec<String>,
     pub from: Option<String>,
     pub to: Option<String>,
     pub subject: Option<String>,
-    #[serde(skip_serializing)]
-    pub raw: Vec<u8>,
+    pub content: Vec<String>,
+    pub raw: String,
 }
 
 impl Message {
     pub fn mock() -> Message {
         Message {
             headers: HashMap::new(),
-            content: vec![String::from("This is a mock message")],
             from: Some(String::from("test@trangar.com")),
             to: Some(String::from("butts@trangar.com")),
             subject: Some(String::from("This is a mock title")),
-            raw: Vec::new(),
+            content: vec![String::from("This is a mock message")],
+            raw: String::new(),
         }
     }
     pub fn from(raw: &[u8]) -> Result<Message> {
         let parsed = parse_mail(raw)
             .with_context(|e| format!("Could not parse raw mail message: {}\n{:?}", e, raw))?;
+        let raw_string = String::from_utf8_lossy(raw).into_owned();
         let mut message = Message {
             headers: HashMap::new(),
-            content: Vec::new(),
             from: None,
             to: None,
             subject: None,
-            raw: raw.into(),
+            content: Vec::new(),
+            raw: raw_string,
         };
         message
             .append(&parsed)
