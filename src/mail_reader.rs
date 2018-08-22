@@ -66,6 +66,7 @@ impl Default for EmailParser {
             .expect("Could not create a secure client");
 
         client.login(&imap_username, &imap_password).unwrap();
+        client.select("INBOX").unwrap();
 
         EmailParser {
             imap_domain,
