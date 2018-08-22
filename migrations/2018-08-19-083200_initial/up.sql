@@ -17,7 +17,7 @@ CREATE TABLE Email (
     "to" TEXT NULL,
     subject TEXT NULL,
     body TEXT NULL,
-    raw TEXT NOT NULL,
+    raw BYTEA NOT NULL,
     read Boolean NOT NULL DEFAULT (false)
 );
 

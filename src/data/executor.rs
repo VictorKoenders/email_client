@@ -100,8 +100,8 @@ impl Executor {
                 from: &from,
                 to: &to,
                 subject: &subject,
-                body: &body,
-                raw: &message.raw
+                body: &body.replace("\x00", ""),
+                raw: &message.raw.as_bytes()
             ),
         )?;
 
