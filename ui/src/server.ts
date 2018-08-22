@@ -13,7 +13,7 @@ namespace server {
         from: string | null;
         to: string | null;
         subject: string | null;
-        body: string[];
+        body: string;
         seen: boolean;
     }
 }

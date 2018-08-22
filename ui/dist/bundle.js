@@ -102,6 +102,17 @@ class MailRenderer extends React.Component {
         super(props, context);
         this.state = {};
     }
+    render_body() {
+        if (!this.props.body)
+            return null;
+        const result = [];
+        const split = this.props.body.split('\n');
+        for (const p of split) {
+            result.push(p);
+            result.push(React.createElement("br", null));
+        }
+        return result;
+    }
     render() {
         return React.createElement("div", null,
             React.createElement("h2", null, this.props.subject),
@@ -110,7 +121,7 @@ class MailRenderer extends React.Component {
             this.props.to,
             React.createElement("br", null),
             React.createElement("br", null),
-            this.props.body);
+            this.render_body());
     }
 }
 exports.MailRenderer = MailRenderer;
