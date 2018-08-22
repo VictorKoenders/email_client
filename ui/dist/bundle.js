@@ -105,13 +105,9 @@ class MailRenderer extends React.Component {
     render_body() {
         if (!this.props.body)
             return null;
-        const result = [];
-        const split = this.props.body.split('\n');
-        for (const p of split) {
-            result.push(p);
-            result.push(React.createElement("br", null));
-        }
-        return result;
+        return this.props.body.split('\n').map((p, i) => React.createElement(React.Fragment, { key: i },
+            p,
+            React.createElement("br", null)));
     }
     render() {
         return React.createElement("div", null,
