@@ -141,7 +141,16 @@ impl EmailParser {
         if !str.starts_with(SEARCH_PREFIX) {
             bail!("Expected {:?}, got {:?}", SEARCH_PREFIX, str);
         }
-        let keys: Vec<_> = str[SEARCH_PREFIX.len()..].trim().split(' ').collect();
+        let newline = str.find("\r\n").unwrap_or_else(|| str.len());
+        let keys: Vec<_> = str[SEARCH_PREFIX.len()..newline]
+            .trim()
+            .split(' ')
+            .filter(|s| !s.trim().is_empty())
+            .collect();
+        if keys.is_empty() {
+            return Ok(());
+        }
+        println!("[MailReader] Parsing IMAP email {:?}", keys);
 
         for key in keys {
             let messages = self
