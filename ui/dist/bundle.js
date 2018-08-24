@@ -86,6 +86,71 @@
 /************************************************************************/
 /******/ ({
 
+/***/ "./src/components/Login.tsx":
+/*!**********************************!*\
+  !*** ./src/components/Login.tsx ***!
+  \**********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const React = __webpack_require__(/*! react */ "react");
+class Login extends React.Component {
+    constructor(props, context) {
+        super(props, context);
+        this.state = {
+            username: "",
+            password: "",
+        };
+    }
+    update_username(ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        this.setState({ username: ev.target.value });
+        if (this.props.failed_login) {
+            this.props.clear_failed_login();
+        }
+        return false;
+    }
+    update_password(ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        this.setState({ password: ev.target.value });
+        if (this.props.failed_login) {
+            this.props.clear_failed_login();
+        }
+        return false;
+    }
+    login(ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        this.props.onAuthenticate(this.state.username, this.state.password);
+        this.setState({ password: "" });
+        return false;
+    }
+    render() {
+        return React.createElement("div", { className: "card mx-auto", style: { width: "600px" } },
+            React.createElement("div", { className: "card-header" }, "Log in"),
+            React.createElement("form", { className: "card-body", onSubmit: this.login.bind(this) },
+                this.props.failed_login ? React.createElement("span", { className: "text-danger" }, "Login failed") : null,
+                React.createElement("div", { className: "form-group row" },
+                    React.createElement("label", { htmlFor: "input_username", className: "col-sm-3 col-form-label" }, "Username"),
+                    React.createElement("div", { className: "col-sm-9" },
+                        React.createElement("input", { type: "text", className: "form-control", placeholder: "Username", id: "input_username", value: this.state.username, onChange: this.update_username.bind(this) }))),
+                React.createElement("div", { className: "form-group row" },
+                    React.createElement("label", { htmlFor: "input_password", className: "col-sm-3 col-form-label" }, "Password"),
+                    React.createElement("div", { className: "col-sm-9" },
+                        React.createElement("input", { type: "password", className: "form-control", placeholder: "Password", id: "input_password", value: this.state.password, onChange: this.update_password.bind(this) }))),
+                React.createElement("button", { type: "submit", className: "btn btn-primary float-right" }, "Log in")));
+    }
+}
+exports.Login = Login;
+
+
+/***/ }),
+
 /***/ "./src/components/MailRenderer.tsx":
 /*!*****************************************!*\
   !*** ./src/components/MailRenderer.tsx ***!
@@ -213,6 +278,7 @@ const React = __webpack_require__(/*! react */ "react");
 const Menu_1 = __webpack_require__(/*! ./Menu */ "./src/components/Menu.tsx");
 const MailRenderer_1 = __webpack_require__(/*! ./MailRenderer */ "./src/components/MailRenderer.tsx");
 const websocket_1 = __webpack_require__(/*! ../websocket */ "./src/websocket.ts");
+const Login_1 = __webpack_require__(/*! ./Login */ "./src/components/Login.tsx");
 class Root extends React.Component {
     constructor(props, context) {
         super(props, context);
@@ -222,6 +288,8 @@ class Root extends React.Component {
             current_address: null,
             current_email: null,
             handler: new websocket_1.Handler(this),
+            authenticated: false,
+            failed_login: false,
         };
     }
     email_received(email) {
@@ -272,8 +340,19 @@ class Root extends React.Component {
             current_email: email,
         });
     }
+    authenticate_result(authenticated) {
+        this.setState({ authenticated, failed_login: authenticated === false });
+    }
+    authenticate(username, password) {
+        this.state.handler.authenticate(username, password);
+    }
+    clear_failed_login() {
+        this.setState({ failed_login: false });
+    }
     render() {
-        let emails = [];
+        if (!this.state.authenticated) {
+            return React.createElement(Login_1.Login, { onAuthenticate: this.authenticate.bind(this), failed_login: this.state.failed_login, clear_failed_login: this.clear_failed_login.bind(this) });
+        }
         return React.createElement("div", { className: "container" },
             React.createElement("div", { className: "row" },
                 React.createElement("div", { className: "col-md-4" },
@@ -322,6 +401,16 @@ class Handler {
         this.current_inbox = null;
         this.connect();
     }
+    authenticate(username, password) {
+        if (this.socket) {
+            this.socket.send(JSON.stringify({
+                authenticate: {
+                    username,
+                    password
+                }
+            }));
+        }
+    }
     load_inbox(address) {
         if (this.socket) {
             this.socket.send(JSON.stringify({
@@ -364,6 +453,9 @@ class Handler {
         }
         else if (json.inbox_loaded) {
             this.handler.inbox_loaded(json.inbox_loaded.address, json.inbox_loaded.emails);
+        }
+        else if (json.hasOwnProperty('authenticate_result')) {
+            this.handler.authenticate_result(json.authenticate_result);
         }
         else {
             console.log("Unknown server message", json);

@@ -6,11 +6,13 @@ use actix::{
 use actix_web::ws;
 use data::{Address, Email, ListAddresses, LoadInbox, LoadInboxResponse, NewEmail};
 use serde_json::{self, Value};
+use std::env;
 use web::State as ServerState;
 
 #[derive(Default)]
 pub struct Client {
     id: usize,
+    authenticated: bool,
 }
 
 impl Actor for Client {
@@ -25,18 +27,6 @@ impl Actor for Client {
             .then(|res, act, ctx| {
                 match res {
                     Ok(id) => act.id = id,
-                    _ => ctx.stop(),
-                }
-                fut::ok(())
-            }).wait(ctx);
-
-        ctx.state()
-            .database
-            .send(ListAddresses)
-            .into_actor(self)
-            .then(|res, act, ctx| {
-                match res {
-                    Ok(Ok(res)) => act.send_init(ctx, res.0),
                     _ => ctx.stop(),
                 }
                 fut::ok(())
@@ -57,6 +47,7 @@ impl Client {
         context: &mut ws::WebsocketContext<Self, ServerState>,
         email_received: Email,
     ) {
+        assert!(self.authenticated);
         context.text(serde_json::to_string(&EmailReceived { email_received }).unwrap());
     }
     fn send_inbox_loaded(
@@ -64,9 +55,11 @@ impl Client {
         context: &mut ws::WebsocketContext<Self, ServerState>,
         inbox_loaded: LoadInboxResponse,
     ) {
+        assert!(self.authenticated);
         context.text(serde_json::to_string(&InboxLoaded { inbox_loaded }).unwrap());
     }
     fn send_init(&self, context: &mut ws::WebsocketContext<Self, ServerState>, init: Vec<Address>) {
+        assert!(self.authenticated);
         context.text(serde_json::to_string(&Init { init }).unwrap());
     }
 }
@@ -99,6 +92,10 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                     }
                 };
                 if let Value::Object(d) = &data["load_inbox"] {
+                    if !self.authenticated {
+                        ctx.text(String::from("{{\"error\":\"Not authenticated\"}}"));
+                        return;
+                    }
                     let address: Address = match serde_json::from_value(Value::Object(d.clone())) {
                         Ok(a) => a,
                         Err(e) => {
@@ -121,6 +118,36 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                         }).wait(ctx);
                     return;
                 }
+                if let Value::Object(d) = &data["authenticate"] {
+                    if let (Value::String(username), Value::String(password)) =
+                        (&d["username"], &d["password"])
+                    {
+                        let env_username = env::var("CLIENT_USERNAME")
+                            .expect("Global variable CLIENT_USERNAME not set");
+                        let env_password = env::var("CLIENT_PASSWORD")
+                            .expect("Global variable CLIENT_PASSWORD not set");
+                        self.authenticated = &env_username == username && &env_password == password;
+                        ctx.text(format!(
+                            "{{\"authenticate_result\":{}}}",
+                            self.authenticated
+                        ));
+
+                        if self.authenticated {
+                            ctx.state()
+                                .database
+                                .send(ListAddresses)
+                                .into_actor(self)
+                                .then(|res, act, ctx| {
+                                    match res {
+                                        Ok(Ok(res)) => act.send_init(ctx, res.0),
+                                        _ => ctx.stop(),
+                                    }
+                                    fut::ok(())
+                                }).wait(ctx);
+                        }
+                        return;
+                    }
+                }
                 println!("Unknown json from websocket client {:?}", text);
             }
             ws::Message::Binary(_bin) => {
@@ -138,6 +165,8 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
 impl Handler<NewEmail> for Client {
     type Result = ();
     fn handle(&mut self, msg: NewEmail, context: &mut Self::Context) {
-        self.send_new_email(context, msg.0);
+        if self.authenticated {
+            self.send_new_email(context, msg.0);
+        }
     }
 }

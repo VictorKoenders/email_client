@@ -2,6 +2,7 @@ interface HandlerListener {
     email_received(email: server.Email): void;
     inbox_loaded(address: server.Address, email: server.Email[]): void;
     setup(addresses: server.Address[]): void;
+    authenticate_result(authenticated: boolean): void;
 }
 
 export class Handler {
@@ -17,6 +18,17 @@ export class Handler {
         this.current_inbox = null;
 
         this.connect();
+    }
+
+    authenticate(username: String, password: String) {
+        if(this.socket) {
+            this.socket.send(JSON.stringify({
+                authenticate: {
+                    username,
+                    password
+                }
+            }));
+        }
     }
 
     load_inbox(address: server.Address) {
@@ -67,6 +79,8 @@ export class Handler {
                 json.inbox_loaded.address,
                 json.inbox_loaded.emails
             );
+        } else if(json.hasOwnProperty('authenticate_result')) {
+            this.handler.authenticate_result(json.authenticate_result);
         } else {
             console.log("Unknown server message", json);
         }
