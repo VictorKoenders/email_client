@@ -420,7 +420,9 @@ class Handler {
         this.current_inbox = address;
     }
     connect() {
-        this.socket = new WebSocket("ws://" + document.location.host + "/ws/");
+        this.socket = new WebSocket((document.location.protocol === "https:" ? "wss://" : "ws://") +
+            document.location.host +
+            "/ws/");
         this.socket.onopen = this.onopen.bind(this);
         this.socket.onclose = this.onclose.bind(this);
         this.socket.onerror = this.onerror.bind(this);
