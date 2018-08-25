@@ -422,6 +422,7 @@ class Handler {
     connect() {
         this.socket = new WebSocket((document.location.protocol === "https:" ? "wss://" : "ws://") +
             document.location.host +
+            document.location.pathname +
             "/ws/");
         this.socket.onopen = this.onopen.bind(this);
         this.socket.onclose = this.onclose.bind(this);
