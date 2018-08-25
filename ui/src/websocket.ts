@@ -45,7 +45,7 @@ export class Handler {
             (document.location.protocol === "https:" ? "wss://" : "ws://") +
             document.location.host + 
             document.location.pathname + 
-            "/ws/"
+            "ws/"
         );
         this.socket.onopen = this.onopen.bind(this);
         this.socket.onclose = this.onclose.bind(this);
