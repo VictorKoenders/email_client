@@ -30,7 +30,7 @@ pub struct EmailParser {
     imap_password: String,
 
     message_recipients: Vec<Recipient<ImapMessage>>,
-    client: Client,
+    pub client: Client,
 }
 
 impl Default for EmailParser {
@@ -145,7 +145,7 @@ impl EmailParser {
         let keys: Vec<_> = str[SEARCH_PREFIX.len()..newline]
             .trim()
             .split(' ')
-            .filter(|s| !s.trim().is_empty())
+            .filter_map(|s| s.parse().ok()) // !s.trim().is_empty())
             .collect();
         if keys.is_empty() {
             return Ok(());
@@ -153,7 +153,15 @@ impl EmailParser {
         println!("[MailReader] Parsing IMAP email {:?}", keys);
 
         for key in keys {
-            let messages = self
+            let messages = Message::read(&mut self.client, key)?;
+            for recipient in &self.message_recipients {
+                for message in &messages {
+                    recipient
+                        .do_send(ImapMessage::NewMessage(message.clone()))
+                        .expect("Could not send message to recipient");
+                }
+            }
+            /*let messages = self
                 .client
                 .fetch(key, "RFC822")
                 .with_context(|e| format!("Could not fetch IMAP message {}: {}", key, e))?;
@@ -171,69 +179,15 @@ impl EmailParser {
                             .expect("Could not send message to recipient");
                     }
                 }
-            }
-        }
-        Ok(())
-    }
-}
-pub struct MockParser {
-    message_recipients: Vec<Recipient<ImapMessage>>,
-}
-
-impl Default for MockParser {
-    fn default() -> MockParser {
-        MockParser {
-            message_recipients: Vec::new(),
-        }
-    }
-}
-
-impl Actor for MockParser {
-    type Context = Context<Self>;
-}
-
-impl Supervised for MockParser {
-    fn restarting(&mut self, _ctx: &mut Self::Context) {
-        println!("[EmailParser] Restarting");
-    }
-}
-
-impl ArbiterService for MockParser {
-    fn service_started(&mut self, ctx: &mut Context<Self>) {
-        println!("[EmailParser] Started");
-        ctx.run_interval(Duration::from_secs(2), |parser, _context| {
-            parser.update().expect("[MailReader] Can not update");
-        });
-    }
-}
-
-impl Handler<AddListener> for MockParser {
-    type Result = ();
-    fn handle(&mut self, msg: AddListener, _context: &mut Self::Context) {
-        self.message_recipients.push(msg.0);
-    }
-}
-
-impl MockParser {
-    fn update(&mut self) -> Result<()> {
-        let message = ImapMessage::NewMessage(Message::mock());
-        for recipient in &self.message_recipients {
-            recipient
-                .do_send(message.clone())
-                .expect("Could not send message to recipient");
+            }*/
         }
         Ok(())
     }
 }
 
-pub fn run(database: Addr<Database>, _system: &SystemRunner, run_mock: bool) {
-    if run_mock {
-        let addr = MockParser::start_service();
-        addr.do_send(AddListener(database.recipient()));
-    } else {
-        let addr = EmailParser::start_service();
-        addr.do_send(AddListener(database.recipient()));
-    }
+pub fn run(database: Addr<Database>, _system: &SystemRunner) {
+    let addr = EmailParser::start_service();
+    addr.do_send(AddListener(database.recipient()));
 }
 
 #[derive(Message)]

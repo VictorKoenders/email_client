@@ -11,17 +11,19 @@ extern crate futures;
 #[macro_use]
 extern crate serde_derive;
 extern crate chrono;
-extern crate postgres;
 extern crate r2d2;
-extern crate r2d2_postgres;
+extern crate r2d2_diesel;
 extern crate serde;
 extern crate serde_json;
 extern crate uuid;
+#[macro_use]
+extern crate diesel;
 
-mod data;
-mod mail_reader;
-mod message;
-mod web;
+pub mod attachment;
+pub mod data;
+pub mod mail_reader;
+pub mod message;
+pub mod web;
 
 use actix::{ArbiterService, System};
 
@@ -29,15 +31,6 @@ pub type Result<T> = std::result::Result<T, failure::Error>;
 
 fn main() {
     dotenv::dotenv().expect("Could not load .env file");
-
-    let mut use_mock_mail_server = false;
-
-    for var in std::env::args() {
-        if var == "--mock" {
-            use_mock_mail_server = true;
-        }
-    }
-
     let runner = System::new("Email server");
 
     let ws_server = web::WebsocketServer::start_service();
@@ -52,7 +45,7 @@ fn main() {
             .expect("Could not register ws server to database");
     }
 
-    mail_reader::run(database.clone(), &runner, use_mock_mail_server);
+    mail_reader::run(database.clone(), &runner);
     web::serve(ws_server, database);
 
     runner.run();

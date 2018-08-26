@@ -5,9 +5,9 @@ import { Handler } from "../websocket";
 import { Login } from "./Login";
 
 interface State {
-    addresses: server.Address[];
-    emails: server.Email[];
-    current_address: server.Address | null;
+    inboxes: server.Inbox[];
+    emails: server.EmailInfo[];
+    current_inbox: server.Inbox | null;
     current_email: server.Email | null;
     handler: Handler;
     authenticated: boolean;
@@ -21,10 +21,10 @@ export class Root extends React.Component<Props, State> {
     constructor(props: Props, context?: any) {
         super(props, context);
         this.state = {
-            addresses: [
+            inboxes: [
             ],
             emails: [],
-            current_address: null,
+            current_inbox: null,
             current_email: null,
             handler: new Handler(this),
             authenticated: false,
@@ -32,28 +32,29 @@ export class Root extends React.Component<Props, State> {
         };
     }
 
-    email_received(email: server.Email) {
+    email_received(email: server.EmailInfo) {
         this.setState(state => {
             let emails = state.emails.slice();
-            let addresses = state.addresses.slice();
-            let address = addresses.find(a => a.id == email.address_id);
-            if (address) {
-                address.unseen_count++;
+            let inboxes = state.inboxes.slice();
+            let current_inbox = state.current_inbox;
+
+            let inbox = inboxes.find(a => a.id == email.inbox_id);
+            if (inbox) {
+                inbox.unread_count++;
             }
-            let current_address = state.current_address;
-            if (current_address && current_address.id == email.address_id) {
-                current_address.unseen_count++;
-                if (email.address_id == current_address.id) {
+            if (current_inbox && current_inbox.id == email.inbox_id) {
+                current_inbox.unread_count++;
+                if (email.inbox_id == current_inbox.id) {
                     emails.splice(0, 0, email);
                 }
             }
-            return { emails, current_address, addresses };
+            return { emails, current_inbox, inboxes };
         });
     }
 
-    inbox_loaded(address: server.Address, emails: server.Email[]) {
+    inbox_loaded(inbox: server.Inbox, emails: server.Email[]) {
         this.setState(state => {
-            if (state.current_address && state.current_address.short_name == address.short_name) {
+            if (state.current_inbox && state.current_inbox.name == inbox.name) {
                 return { emails } as any;
             } else {
                 return {};
@@ -61,22 +62,22 @@ export class Root extends React.Component<Props, State> {
         });
     }
 
-    setup(addresses: server.Address[]) {
-        this.setState({ addresses });
+    setup(inboxes: server.Inbox[]) {
+        this.setState({ inboxes });
     }
 
-    select_address(address: server.Address) {
-        this.state.handler.load_inbox(address);
+    select_inbox(inbox: server.Inbox) {
+        this.state.handler.load_inbox(inbox);
         this.setState({
-            current_address: address
+            current_inbox: inbox
         });
     }
 
     select_email(email: server.Email) {
-        if (!email.seen) {
-            email.seen = true;
-            if (this.state.current_address) {
-                this.state.current_address.unseen_count--;
+        if (!email.read) {
+            email.read = true;
+            if (this.state.current_inbox) {
+                this.state.current_inbox.unread_count--;
             }
         }
         this.setState({
@@ -92,27 +93,31 @@ export class Root extends React.Component<Props, State> {
         this.state.handler.authenticate(username, password);
     }
 
-    clear_failed_login(){
-        this.setState({failed_login: false});
+    clear_failed_login() {
+        this.setState({ failed_login: false });
     }
 
     render() {
         if (!this.state.authenticated) {
-            return <Login onAuthenticate={this.authenticate.bind(this)} failed_login={this.state.failed_login} clear_failed_login={this.clear_failed_login.bind(this)} />;
+            return <Login
+                onAuthenticate={this.authenticate.bind(this)}
+                failed_login={this.state.failed_login}
+                clear_failed_login={this.clear_failed_login.bind(this)}
+            />;
         }
         return <div className="container">
             <div className="row">
                 <div className="col-md-4">
-                    <Menu addresses={this.state.addresses}
+                    <Menu inboxes={this.state.inboxes}
                         emails={this.state.emails}
-                        onAddressSelected={this.select_address.bind(this)}
+                        onInboxSelected={this.select_inbox.bind(this)}
                         onEmailSelected={this.select_email.bind(this)}
-                        active_address={this.state.current_address}
+                        active_inbox={this.state.current_inbox}
                         active_email={this.state.current_email}
                     />
                 </div>
                 <div className="col-md-8">
-                    {this.state.current_email ? <MailRenderer {...this.state.current_email} /> : null}
+                    {this.state.current_email ? <MailRenderer email={this.state.current_email} /> : null}
                 </div>
             </div>
         </div>;

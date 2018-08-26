@@ -1,6 +1,6 @@
-mod client;
-mod messages;
-mod server;
+pub mod client;
+pub mod messages;
+pub mod server;
 
 pub use self::client::Client;
 pub use self::messages::{Connect, Disconnect};

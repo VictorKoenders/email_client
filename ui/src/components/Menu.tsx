@@ -5,12 +5,12 @@ interface State {
 }
 
 interface Props {
-    addresses: server.Address[];
-    emails: server.Email[];
-    active_address: server.Address | null;
-    active_email: server.Email | null;
-    onAddressSelected: (addr: server.Address) => void;
-    onEmailSelected: (email: server.Email) => void;
+    inboxes: server.Inbox[];
+    emails: server.EmailInfo[];
+    active_inbox: server.Inbox | null;
+    active_email: server.EmailInfo | null;
+    onInboxSelected: (addr: server.Inbox) => void;
+    onEmailSelected: (email: server.EmailInfo) => void;
 }
 
 export class Menu extends React.Component<Props, State> {
@@ -27,7 +27,7 @@ export class Menu extends React.Component<Props, State> {
         }));
     }
 
-    select_address(address: server.Address, ev: React.MouseEvent<HTMLLIElement>) {
+    select_inbox(inbox: server.Inbox, ev: React.MouseEvent<HTMLLIElement>) {
         ev.preventDefault();
         ev.stopPropagation();
 
@@ -35,7 +35,7 @@ export class Menu extends React.Component<Props, State> {
             offset: 1
         });
 
-        this.props.onAddressSelected(address);
+        this.props.onInboxSelected(inbox);
 
         return false;
     }
@@ -49,13 +49,12 @@ export class Menu extends React.Component<Props, State> {
         return false;
     }
 
-    render_address(address: server.Address, index: number) {
-        return <li key={index} onClick={this.select_address.bind(this, address)}
-            className={this.props.active_address && this.props.active_address.id == address.id ? "active": ""}>
-            <small className="subtext">{address.email_address}</small>
-            {address.unseen_count > 0
-                ? <b>{address.short_name} ({address.unseen_count})</b>
-                : address.short_name
+    render_inbox(inbox: server.Inbox, index: number) {
+        return <li key={index} onClick={this.select_inbox.bind(this, inbox)}
+            className={this.props.active_inbox && this.props.active_inbox.id == inbox.id ? "active": ""}>
+            {inbox.unread_count > 0
+                ? <b>{inbox.name} ({inbox.unread_count})</b>
+                : inbox.name
             }<br />
         </li>
     }
@@ -63,7 +62,7 @@ export class Menu extends React.Component<Props, State> {
     render_email(email: server.Email, index: number) {
         return <li key={index} onClick={this.select_email.bind(this, email)}
             className={this.props.active_email && this.props.active_email.id == email.id ? "active":""}>
-        {email.seen
+        {email.read
             ? email.from
             : <b>{email.from} *</b>}
             <br />
@@ -75,7 +74,7 @@ export class Menu extends React.Component<Props, State> {
         return <div className="sliding-row">
             <div style={{left: (-this.state.offset * 100) + "%"}}>
                 <ul className="box-list">
-                    {this.props.addresses.map(this.render_address.bind(this))}
+                    {this.props.inboxes.map(this.render_inbox.bind(this))}
                 </ul>
             </div>
             <div style={{left: (-this.state.offset * 100) + "%"}}>

@@ -168,18 +168,18 @@ class MailRenderer extends React.Component {
         this.state = {};
     }
     render_body() {
-        if (!this.props.body)
+        if (!this.props.email.text_plain_body)
             return null;
-        return this.props.body.split('\n').map((p, i) => React.createElement(React.Fragment, { key: i },
+        return this.props.email.text_plain_body.split('\n').map((p, i) => React.createElement(React.Fragment, { key: i },
             p,
             React.createElement("br", null)));
     }
     render() {
         return React.createElement("div", null,
-            React.createElement("h2", null, this.props.subject),
-            this.props.from,
+            React.createElement("h2", null, this.props.email.subject),
+            this.props.email.from,
             " -> ",
-            this.props.to,
+            this.props.email.to,
             React.createElement("br", null),
             React.createElement("br", null),
             this.render_body());
@@ -213,13 +213,13 @@ class Menu extends React.Component {
             offset: 0,
         }));
     }
-    select_address(address, ev) {
+    select_inbox(inbox, ev) {
         ev.preventDefault();
         ev.stopPropagation();
         this.setState({
             offset: 1
         });
-        this.props.onAddressSelected(address);
+        this.props.onInboxSelected(inbox);
         return false;
     }
     select_email(email, ev) {
@@ -228,21 +228,20 @@ class Menu extends React.Component {
         this.props.onEmailSelected(email);
         return false;
     }
-    render_address(address, index) {
-        return React.createElement("li", { key: index, onClick: this.select_address.bind(this, address), className: this.props.active_address && this.props.active_address.id == address.id ? "active" : "" },
-            React.createElement("small", { className: "subtext" }, address.email_address),
-            address.unseen_count > 0
+    render_inbox(inbox, index) {
+        return React.createElement("li", { key: index, onClick: this.select_inbox.bind(this, inbox), className: this.props.active_inbox && this.props.active_inbox.id == inbox.id ? "active" : "" },
+            inbox.unread_count > 0
                 ? React.createElement("b", null,
-                    address.short_name,
+                    inbox.name,
                     " (",
-                    address.unseen_count,
+                    inbox.unread_count,
                     ")")
-                : address.short_name,
+                : inbox.name,
             React.createElement("br", null));
     }
     render_email(email, index) {
         return React.createElement("li", { key: index, onClick: this.select_email.bind(this, email), className: this.props.active_email && this.props.active_email.id == email.id ? "active" : "" },
-            email.seen
+            email.read
                 ? email.from
                 : React.createElement("b", null,
                     email.from,
@@ -253,7 +252,7 @@ class Menu extends React.Component {
     render() {
         return React.createElement("div", { className: "sliding-row" },
             React.createElement("div", { style: { left: (-this.state.offset * 100) + "%" } },
-                React.createElement("ul", { className: "box-list" }, this.props.addresses.map(this.render_address.bind(this)))),
+                React.createElement("ul", { className: "box-list" }, this.props.inboxes.map(this.render_inbox.bind(this)))),
             React.createElement("div", { style: { left: (-this.state.offset * 100) + "%" } },
                 React.createElement("div", { onClick: this.back.bind(this), style: { cursor: "pointer" } }, "< Back"),
                 React.createElement("ul", { className: "box-list" }, this.props.emails.map(this.render_email.bind(this)))));
@@ -283,9 +282,9 @@ class Root extends React.Component {
     constructor(props, context) {
         super(props, context);
         this.state = {
-            addresses: [],
+            inboxes: [],
             emails: [],
-            current_address: null,
+            current_inbox: null,
             current_email: null,
             handler: new websocket_1.Handler(this),
             authenticated: false,
@@ -295,24 +294,24 @@ class Root extends React.Component {
     email_received(email) {
         this.setState(state => {
             let emails = state.emails.slice();
-            let addresses = state.addresses.slice();
-            let address = addresses.find(a => a.id == email.address_id);
-            if (address) {
-                address.unseen_count++;
+            let inboxes = state.inboxes.slice();
+            let current_inbox = state.current_inbox;
+            let inbox = inboxes.find(a => a.id == email.inbox_id);
+            if (inbox) {
+                inbox.unread_count++;
             }
-            let current_address = state.current_address;
-            if (current_address && current_address.id == email.address_id) {
-                current_address.unseen_count++;
-                if (email.address_id == current_address.id) {
+            if (current_inbox && current_inbox.id == email.inbox_id) {
+                current_inbox.unread_count++;
+                if (email.inbox_id == current_inbox.id) {
                     emails.splice(0, 0, email);
                 }
             }
-            return { emails, current_address, addresses };
+            return { emails, current_inbox, inboxes };
         });
     }
-    inbox_loaded(address, emails) {
+    inbox_loaded(inbox, emails) {
         this.setState(state => {
-            if (state.current_address && state.current_address.short_name == address.short_name) {
+            if (state.current_inbox && state.current_inbox.name == inbox.name) {
                 return { emails };
             }
             else {
@@ -320,20 +319,20 @@ class Root extends React.Component {
             }
         });
     }
-    setup(addresses) {
-        this.setState({ addresses });
+    setup(inboxes) {
+        this.setState({ inboxes });
     }
-    select_address(address) {
-        this.state.handler.load_inbox(address);
+    select_inbox(inbox) {
+        this.state.handler.load_inbox(inbox);
         this.setState({
-            current_address: address
+            current_inbox: inbox
         });
     }
     select_email(email) {
-        if (!email.seen) {
-            email.seen = true;
-            if (this.state.current_address) {
-                this.state.current_address.unseen_count--;
+        if (!email.read) {
+            email.read = true;
+            if (this.state.current_inbox) {
+                this.state.current_inbox.unread_count--;
             }
         }
         this.setState({
@@ -356,8 +355,8 @@ class Root extends React.Component {
         return React.createElement("div", { className: "container" },
             React.createElement("div", { className: "row" },
                 React.createElement("div", { className: "col-md-4" },
-                    React.createElement(Menu_1.Menu, { addresses: this.state.addresses, emails: this.state.emails, onAddressSelected: this.select_address.bind(this), onEmailSelected: this.select_email.bind(this), active_address: this.state.current_address, active_email: this.state.current_email })),
-                React.createElement("div", { className: "col-md-8" }, this.state.current_email ? React.createElement(MailRenderer_1.MailRenderer, Object.assign({}, this.state.current_email)) : null)));
+                    React.createElement(Menu_1.Menu, { inboxes: this.state.inboxes, emails: this.state.emails, onInboxSelected: this.select_inbox.bind(this), onEmailSelected: this.select_email.bind(this), active_inbox: this.state.current_inbox, active_email: this.state.current_email })),
+                React.createElement("div", { className: "col-md-8" }, this.state.current_email ? React.createElement(MailRenderer_1.MailRenderer, { email: this.state.current_email }) : null)));
     }
 }
 exports.Root = Root;
@@ -411,13 +410,13 @@ class Handler {
             }));
         }
     }
-    load_inbox(address) {
+    load_inbox(inbox) {
         if (this.socket) {
             this.socket.send(JSON.stringify({
-                load_inbox: address
+                load_inbox: inbox
             }));
         }
-        this.current_inbox = address;
+        this.current_inbox = inbox;
     }
     connect() {
         this.socket = new WebSocket((document.location.protocol === "https:" ? "wss://" : "ws://") +
@@ -455,9 +454,9 @@ class Handler {
             this.handler.email_received(json.email_received);
         }
         else if (json.inbox_loaded) {
-            this.handler.inbox_loaded(json.inbox_loaded.address, json.inbox_loaded.emails);
+            this.handler.inbox_loaded(json.inbox_loaded.inbox_with_address, json.inbox_loaded.emails);
         }
-        else if (json.hasOwnProperty('authenticate_result')) {
+        else if (json.authenticate_result === true || json.authenticate_result === false) {
             this.handler.authenticate_result(json.authenticate_result);
         }
         else {

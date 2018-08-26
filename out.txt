@@ -1,2 +1,0 @@
-    Checking mail v0.1.0 (file:///D:/Development/rust/email_client)
-    Finished dev [unoptimized + debuginfo] target(s) in 2.13s

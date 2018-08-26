@@ -4,10 +4,7 @@ interface State {
 }
 
 interface Props {
-    from: string | null;
-    to: string | null;
-    subject: string | null;
-    body: string | null;
+    email: server.Email;
 }
 
 export class MailRenderer extends React.Component<Props, State> {
@@ -18,14 +15,14 @@ export class MailRenderer extends React.Component<Props, State> {
     }
 
     render_body() {
-        if(!this.props.body) return null;
-        return this.props.body.split('\n').map((p, i) => <React.Fragment key={i}>{p}<br /></React.Fragment>);
+        if(!this.props.email.text_plain_body) return null;
+        return this.props.email.text_plain_body.split('\n').map((p, i) => <React.Fragment key={i}>{p}<br /></React.Fragment>);
     }
 
     render() {
         return <div>
-            <h2>{this.props.subject}</h2>
-            {this.props.from} -&gt; {this.props.to}<br /><br />
+            <h2>{this.props.email.subject}</h2>
+            {this.props.email.from} -&gt; {this.props.email.to}<br /><br />
             {this.render_body()}
         </div>;
     }

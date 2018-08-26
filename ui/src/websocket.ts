@@ -1,7 +1,7 @@
 interface HandlerListener {
-    email_received(email: server.Email): void;
-    inbox_loaded(address: server.Address, email: server.Email[]): void;
-    setup(addresses: server.Address[]): void;
+    email_received(email: server.EmailInfo): void;
+    inbox_loaded(address: server.Inbox, email: server.EmailInfo[]): void;
+    setup(addresses: server.Inbox[]): void;
     authenticate_result(authenticated: boolean): void;
 }
 
@@ -9,7 +9,7 @@ export class Handler {
     private socket: WebSocket | null;
     private reconnect_timeout: NodeJS.Timer | null;
     private handler: HandlerListener;
-    private current_inbox: server.Address | null;
+    private current_inbox: server.Inbox | null;
 
     constructor(handler: HandlerListener) {
         this.socket = null;
@@ -31,13 +31,13 @@ export class Handler {
         }
     }
 
-    load_inbox(address: server.Address) {
+    load_inbox(inbox: server.Inbox) {
         if(this.socket) {
             this.socket.send(JSON.stringify({
-                load_inbox: address
+                load_inbox: inbox
             }));
         }
-        this.current_inbox = address;
+        this.current_inbox = inbox;
     }
 
     private connect() {
@@ -71,7 +71,7 @@ export class Handler {
     }
 
     private onmessage(ev: MessageEvent) {
-        let json = JSON.parse(ev.data);
+        let json: server.WebSocketMessage = JSON.parse(ev.data);
         if(json.init) {
             this.handler.setup(json.init);
             if(this.current_inbox){
@@ -81,10 +81,10 @@ export class Handler {
             this.handler.email_received(json.email_received);
         } else if(json.inbox_loaded) {
             this.handler.inbox_loaded(
-                json.inbox_loaded.address,
+                json.inbox_loaded.inbox_with_address,
                 json.inbox_loaded.emails
             );
-        } else if(json.hasOwnProperty('authenticate_result')) {
+        } else if(json.authenticate_result === true || json.authenticate_result === false) {
             this.handler.authenticate_result(json.authenticate_result);
         } else {
             console.log("Unknown server message", json);
