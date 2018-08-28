@@ -178,11 +178,22 @@ class MailRenderer extends React.Component {
     select_attachment(attachment, ev) {
         this.props.handler.load_attachment(attachment);
     }
+    download_attachment(attachment, ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        document.location.href = "/attachment/" + attachment.id;
+        return false;
+    }
     render_attachments() {
         const attachments = [];
         for (const attachment of this.props.email.attachments) {
             const name = attachment.name || ("unknown " + attachment.mime_type);
-            attachments.push(React.createElement("button", { type: "button", className: "btn btn-secondary", key: attachment.id, onClick: this.select_attachment.bind(this, attachment), "data-toggle": "modal", "data-target": "#attachment_popup" }, name));
+            if (this.is_renderable_mime_type(attachment.mime_type)) {
+                attachments.push(React.createElement("button", { type: "button", className: "btn btn-secondary", key: attachment.id, onClick: this.select_attachment.bind(this, attachment), "data-toggle": "modal", "data-target": "#attachment_popup" }, name));
+            }
+            else {
+                attachments.push(React.createElement("button", { type: "button", className: "btn btn-secondary", key: attachment.id, onClick: this.download_attachment.bind(this, attachment) }, name));
+            }
         }
         if (attachments.length > 0) {
             return React.createElement(React.Fragment, null,
@@ -221,8 +232,10 @@ class MailRenderer extends React.Component {
                             React.createElement("span", { "aria-hidden": "true" }, "\u00D7"))),
                     React.createElement("div", { className: "modal-body" }, attachment_content),
                     React.createElement("div", { className: "modal-footer" },
-                        React.createElement("button", { type: "button", className: "btn btn-default" }, "Download"),
-                        React.createElement("button", { type: "button", className: "btn btn-secondary", "data-dismiss": "modal" }, "Close")))));
+                        this.props.active_attachment
+                            ? React.createElement("a", { href: "/attachment/" + this.props.active_attachment.id, className: "btn btn-default" }, "Download")
+                            : null,
+                        React.createElement("button", { type: "button", className: "btn btn-primary", "data-dismiss": "modal" }, "Close")))));
     }
     render_text_html_tabs() {
         return React.createElement("ul", { className: "nav nav-tabs" },

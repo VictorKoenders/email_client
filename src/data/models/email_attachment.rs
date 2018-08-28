@@ -16,6 +16,15 @@ pub struct AttachmentInfo {
 }
 
 impl AttachmentInfo {
+    pub fn from_id(id: Uuid) -> AttachmentInfo {
+        AttachmentInfo {
+            id,
+            mime_type: String::new(),
+            name: None,
+            content_id: None,
+        }
+    }
+
     pub fn load_by_email(
         connection: &PgConnection,
         email_id: &Uuid,

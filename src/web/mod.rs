@@ -3,7 +3,7 @@ pub mod socket;
 
 pub use self::socket::Server as WebsocketServer;
 
-use self::serve::{bundle, bundle_map, index, style};
+use self::serve::{bundle, bundle_map, index, style, download_attachment};
 use self::socket::ws_start;
 use actix::Addr;
 use actix_web::{server, App};
@@ -31,6 +31,7 @@ pub fn serve(addr: Addr<WebsocketServer>, database: Addr<Database>) {
             .resource("/bundle.js", |r| r.f(bundle))
             .resource("/bundle.js.map", |r| r.f(bundle_map))
             .resource("/ws/", |r| r.f(ws_start))
+            .resource("/attachment/{id}", |r| r.f(download_attachment))
         }).bind(&client_addr)
         .unwrap_or_else(|e| panic!("Can not bind on {}: {:?}", client_addr, e));
 
