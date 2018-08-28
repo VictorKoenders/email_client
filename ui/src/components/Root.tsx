@@ -8,6 +8,7 @@ interface State {
     inboxes: server.Inbox[];
     emails: server.EmailInfo[];
     current_inbox: server.Inbox | null;
+    current_email_info: server.EmailInfo | null;
     current_email: server.Email | null;
     handler: Handler;
     authenticated: boolean;
@@ -25,6 +26,7 @@ export class Root extends React.Component<Props, State> {
             ],
             emails: [],
             current_inbox: null,
+            current_email_info: null,
             current_email: null,
             handler: new Handler(this),
             authenticated: false,
@@ -62,6 +64,15 @@ export class Root extends React.Component<Props, State> {
         });
     }
 
+    email_loaded(email: server.Email) {
+        this.setState(state => {
+            if (state.current_email_info && state.current_email_info.id == email.id) {
+                return { current_email: email } as any;
+            } else {
+                return {};
+            }
+        });
+    }
     setup(inboxes: server.Inbox[]) {
         this.setState({ inboxes });
     }
@@ -73,15 +84,17 @@ export class Root extends React.Component<Props, State> {
         });
     }
 
-    select_email(email: server.Email) {
+    select_email(email: server.EmailInfo) {
         if (!email.read) {
             email.read = true;
             if (this.state.current_inbox) {
                 this.state.current_inbox.unread_count--;
             }
         }
+        this.state.handler.load_email(email);
         this.setState({
-            current_email: email,
+            current_email_info: email,
+            current_email: null,
         });
     }
 

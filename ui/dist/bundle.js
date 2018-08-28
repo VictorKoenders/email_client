@@ -285,6 +285,7 @@ class Root extends React.Component {
             inboxes: [],
             emails: [],
             current_inbox: null,
+            current_email_info: null,
             current_email: null,
             handler: new websocket_1.Handler(this),
             authenticated: false,
@@ -319,6 +320,16 @@ class Root extends React.Component {
             }
         });
     }
+    email_loaded(email) {
+        this.setState(state => {
+            if (state.current_email_info && state.current_email_info.id == email.id) {
+                return { current_email: email };
+            }
+            else {
+                return {};
+            }
+        });
+    }
     setup(inboxes) {
         this.setState({ inboxes });
     }
@@ -335,8 +346,10 @@ class Root extends React.Component {
                 this.state.current_inbox.unread_count--;
             }
         }
+        this.state.handler.load_email(email);
         this.setState({
-            current_email: email,
+            current_email_info: email,
+            current_email: null,
         });
     }
     authenticate_result(authenticated) {
@@ -398,6 +411,8 @@ class Handler {
         this.reconnect_timeout = null;
         this.handler = handler;
         this.current_inbox = null;
+        this.current_email = null;
+        this.current_email_info = null;
         this.connect();
     }
     authenticate(username, password) {
@@ -417,6 +432,14 @@ class Handler {
             }));
         }
         this.current_inbox = inbox;
+    }
+    load_email(email) {
+        if (this.socket) {
+            this.socket.send(JSON.stringify({
+                load_email: email
+            }));
+        }
+        this.current_email_info = email;
     }
     connect() {
         this.socket = new WebSocket((document.location.protocol === "https:" ? "wss://" : "ws://") +
@@ -438,6 +461,7 @@ class Handler {
         this.reconnect_timeout = setTimeout(() => {
             this.connect();
         }, 5000);
+        this.handler.authenticate_result(false);
     }
     onerror(ev) {
         console.error("[Websocket]", ev);
@@ -455,6 +479,10 @@ class Handler {
         }
         else if (json.inbox_loaded) {
             this.handler.inbox_loaded(json.inbox_loaded.inbox_with_address, json.inbox_loaded.emails);
+        }
+        else if (json.email_loaded) {
+            this.handler.email_loaded(json.email_loaded);
+            this.current_email = json.email_loaded;
         }
         else if (json.authenticate_result === true || json.authenticate_result === false) {
             this.handler.authenticate_result(json.authenticate_result);

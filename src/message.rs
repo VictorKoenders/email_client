@@ -67,21 +67,9 @@ impl Message {
 
                 let mail = flatten(&mail);
 
-                let subpart = match mail.iter().find(|p| p.ctype.mimetype == "text/plain") {
-                    Some(p) => p,
-                    None => bail!(
-                        "Could not parse imap_index {:?}: text/plain part not found",
-                        imap_index
-                    ),
-                };
-
-                message.plain_text_body = match subpart.get_body() {
-                    Ok(body) => body,
-                    Err(e) => bail!(
-                        "Could not get text/plain body of imap_index {:?}: {:?}",
-                        imap_index,
-                        e
-                    ),
+                message.plain_text_body = match mail.iter().find(|p| p.ctype.mimetype == "text/plain").map(|p| p.get_body()) {
+                    Some(Ok(body)) => body,
+                    x => format!("Could not retreive text/plain body: {:?}", x),
                 };
 
                 if let Some(html_subpart) = mail.iter().find(|p| p.ctype.mimetype == "text/html") {
@@ -100,11 +88,8 @@ impl Message {
                 }) {
                     if attachment.ctype.mimetype.starts_with("multipart/") {
                         match attachment.get_body() {
-                            Ok(ref s) if !s.is_empty() => {
-                                bail!(
-                                    "imap_index {:?} has a non-empty multipart component",
-                                    imap_index
-                                );
+                            Ok(ref s) if !s.trim().is_empty() => {
+                                message.attachments.push(Attachment::from_parsed_mail(attachment)?);
                             }
                             _ => {}
                         }
@@ -119,7 +104,7 @@ impl Message {
             }
         }
 
-        Ok(Vec::new())
+        Ok(result)
     }
 
     /*
