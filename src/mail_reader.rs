@@ -148,7 +148,7 @@ impl EmailParser {
         }
         println!("[MailReader] Parsing IMAP email {:?}", keys);
 
-        for key in keys.into_iter().rev() {
+        for key in keys {
             let messages = Message::read(&mut self.client, key)?;
             for recipient in &self.message_recipients {
                 for message in &messages {
