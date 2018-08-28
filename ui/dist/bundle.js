@@ -181,7 +181,7 @@ class MailRenderer extends React.Component {
     download_attachment(attachment, ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        document.location.href = "/attachment/" + attachment.id;
+        document.location.href = "attachment/" + attachment.id;
         return false;
     }
     render_attachments() {
@@ -233,7 +233,7 @@ class MailRenderer extends React.Component {
                     React.createElement("div", { className: "modal-body" }, attachment_content),
                     React.createElement("div", { className: "modal-footer" },
                         this.props.active_attachment
-                            ? React.createElement("a", { href: "/attachment/" + this.props.active_attachment.id, className: "btn btn-default" }, "Download")
+                            ? React.createElement("a", { href: "attachment/" + this.props.active_attachment.id, className: "btn btn-default" }, "Download")
                             : null,
                         React.createElement("button", { type: "button", className: "btn btn-primary", "data-dismiss": "modal" }, "Close")))));
     }
@@ -519,6 +519,12 @@ const React = __webpack_require__(/*! react */ "react");
 const ReactDOM = __webpack_require__(/*! react-dom */ "react-dom");
 const Root_1 = __webpack_require__(/*! ./components/Root */ "./src/components/Root.tsx");
 ReactDOM.render(React.createElement(Root_1.Root, null), document.getElementById("example"));
+window.replace_url_by_image = function (element) {
+    const parent = element.parentElement;
+    const new_node = document.createElement("img");
+    new_node.src = element.href;
+    parent.replaceChild(new_node, element);
+};
 
 
 /***/ }),
