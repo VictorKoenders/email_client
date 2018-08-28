@@ -1,4 +1,5 @@
 use super::models::email::{Email, EmailInfo};
+use super::models::email_attachment::{Attachment, AttachmentInfo};
 use super::models::inbox::InboxWithAddress;
 use actix::dev::Message;
 use Result;
@@ -36,4 +37,16 @@ pub struct LoadEmailResponse {
 
 impl Message for LoadEmail {
     type Result = Result<LoadEmailResponse>;
+}
+
+#[derive(Debug)]
+pub struct LoadAttachment(pub AttachmentInfo);
+
+#[derive(Debug, Serialize)]
+pub struct LoadAttachmentResponse {
+    pub attachment: Attachment,
+}
+
+impl Message for LoadAttachment {
+    type Result = Result<LoadAttachmentResponse>;
 }

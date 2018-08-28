@@ -1,6 +1,7 @@
 interface HandlerListener {
     email_received(email: server.EmailInfo): void;
     email_loaded(email: server.Email): void;
+    attachment_loaded(attachment: server.Attachment): void;
     inbox_loaded(address: server.Inbox, email: server.EmailInfo[]): void;
     setup(addresses: server.Inbox[]): void;
     authenticate_result(authenticated: boolean): void;
@@ -11,16 +12,12 @@ export class Handler {
     private reconnect_timeout: NodeJS.Timer | null;
     private handler: HandlerListener;
     private current_inbox: server.Inbox | null;
-    private current_email_info: server.EmailInfo | null;
-    private current_email: server.Email | null;
 
     constructor(handler: HandlerListener) {
         this.socket = null;
         this.reconnect_timeout = null;
         this.handler = handler;
         this.current_inbox = null;
-        this.current_email = null;
-        this.current_email_info = null;
 
         this.connect();
     }
@@ -51,7 +48,14 @@ export class Handler {
                 load_email: email
             }));
         }
-        this.current_email_info = email;
+    }
+
+    load_attachment(attachment: server.AttachmentInfo) {
+        if(this.socket) {
+            this.socket.send(JSON.stringify({
+                load_attachment: attachment
+            }));
+        }
     }
 
     private connect() {
@@ -103,7 +107,10 @@ export class Handler {
             this.handler.email_loaded(
                 json.email_loaded
             );
-            this.current_email = json.email_loaded;
+        } else if(json.attachment_loaded) {
+            this.handler.attachment_loaded(
+                json.attachment_loaded
+            );
         } else if(json.authenticate_result === true || json.authenticate_result === false) {
             this.handler.authenticate_result(json.authenticate_result);
         } else {

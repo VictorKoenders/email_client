@@ -1,7 +1,9 @@
 use super::models::email::{Email, EmailFromImap, EmailInfo};
+use super::models::email_attachment::Attachment;
 use super::models::inbox::InboxWithAddress;
 use super::{
-    ListAddressResult, ListAddresses, LoadEmail, LoadEmailResponse, LoadInbox, LoadInboxResponse,
+    ListAddressResult, ListAddresses, LoadAttachment, LoadAttachmentResponse, LoadEmail,
+    LoadEmailResponse, LoadInbox, LoadInboxResponse,
 };
 use actix::{Actor, ArbiterService, Context, Handler, Recipient, Supervised};
 use diesel::PgConnection;
@@ -140,6 +142,19 @@ impl Handler<LoadInbox> for Database {
     }
 }
 
+impl Handler<LoadAttachment> for Database {
+    type Result = Result<LoadAttachmentResponse>;
+
+    fn handle(
+        &mut self,
+        msg: LoadAttachment,
+        _ctx: &mut Self::Context,
+    ) -> Result<LoadAttachmentResponse> {
+        let connection = self.pool.get()?;
+        let attachment = Attachment::load_by_id(&connection, &msg.0.id)?;
+        Ok(LoadAttachmentResponse { attachment })
+    }
+}
 impl Supervised for Database {
     fn restarting(&mut self, _ctx: &mut Self::Context) {
         println!("[Database] Restarting");

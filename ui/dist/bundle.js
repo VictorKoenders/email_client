@@ -175,11 +175,14 @@ class MailRenderer extends React.Component {
         this.setState({ show_html });
         return false;
     }
+    select_attachment(attachment, ev) {
+        this.props.handler.load_attachment(attachment);
+    }
     render_attachments() {
         const attachments = [];
         for (const attachment of this.props.email.attachments) {
             const name = attachment.name || ("unknown " + attachment.mime_type);
-            attachments.push(React.createElement("button", { type: "button", className: "btn btn-secondary", key: attachment.id }, name));
+            attachments.push(React.createElement("button", { type: "button", className: "btn btn-secondary", key: attachment.id, onClick: this.select_attachment.bind(this, attachment), "data-toggle": "modal", "data-target": "#attachment_popup" }, name));
         }
         if (attachments.length > 0) {
             return React.createElement(React.Fragment, null,
@@ -187,6 +190,39 @@ class MailRenderer extends React.Component {
                 React.createElement("br", null));
         }
         return null;
+    }
+    is_renderable_mime_type(mime_type) {
+        return mime_type.startsWith("image/");
+    }
+    render_attachment() {
+        return React.createElement("b", null, "Prview not implemented");
+    }
+    render_attachment_modal() {
+        let attachment_name = "unknown";
+        let attachment_content = null;
+        if (this.props.active_attachment) {
+            if (this.props.active_attachment.name) {
+                attachment_name = this.props.active_attachment.name;
+            }
+            attachment_name += " (" + this.props.active_attachment.mime_type + ")";
+            if (this.is_renderable_mime_type(this.props.active_attachment.mime_type)) {
+                var base64 = base64ArrayBuffer(this.props.active_attachment.contents);
+                attachment_content = React.createElement("img", { src: "data:" + this.props.active_attachment.mime_type + ";base64," + base64 });
+            }
+        }
+        return React.createElement("div", { className: "modal fade bd-example-modal-lg", tabIndex: -1, role: "dialog", "aria-labelledby": "myLargeModalLabel", "aria-hidden": "true", id: "attachment_popup" },
+            React.createElement("div", { className: "modal-dialog modal-lg" },
+                React.createElement("div", { className: "modal-content" },
+                    React.createElement("div", { className: "modal-header" },
+                        React.createElement("h5", { className: "modal-title" }, this.props.active_attachment
+                            ? attachment_name
+                            : ""),
+                        React.createElement("button", { type: "button", className: "close", "data-dismiss": "modal", "aria-label": "Close" },
+                            React.createElement("span", { "aria-hidden": "true" }, "\u00D7"))),
+                    React.createElement("div", { className: "modal-body" }, attachment_content),
+                    React.createElement("div", { className: "modal-footer" },
+                        React.createElement("button", { type: "button", className: "btn btn-default" }, "Download"),
+                        React.createElement("button", { type: "button", className: "btn btn-secondary", "data-dismiss": "modal" }, "Close")))));
     }
     render_text_html_tabs() {
         return React.createElement("ul", { className: "nav nav-tabs" },
@@ -214,11 +250,51 @@ class MailRenderer extends React.Component {
             React.createElement("br", null),
             React.createElement("br", null),
             this.render_attachments(),
+            this.render_attachment_modal(),
             this.props.email.html_body ? this.render_text_html_tabs() : null,
             this.render_body());
     }
 }
 exports.MailRenderer = MailRenderer;
+function base64ArrayBuffer(arrayBuffer) {
+    var base64 = '';
+    var encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    var bytes = new Uint8Array(arrayBuffer);
+    var byteLength = bytes.byteLength;
+    var byteRemainder = byteLength % 3;
+    var mainLength = byteLength - byteRemainder;
+    var a, b, c, d;
+    var chunk;
+    // Main loop deals with bytes in chunks of 3
+    for (var i = 0; i < mainLength; i = i + 3) {
+        // Combine the three bytes into a single integer
+        chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+        // Use bitmasks to extract 6-bit segments from the triplet
+        a = (chunk & 16515072) >> 18; // 16515072 = (2^6 - 1) << 18
+        b = (chunk & 258048) >> 12; // 258048   = (2^6 - 1) << 12
+        c = (chunk & 4032) >> 6; // 4032     = (2^6 - 1) << 6
+        d = chunk & 63; // 63       = 2^6 - 1
+        // Convert the raw binary segments to the appropriate ASCII encoding
+        base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d];
+    }
+    // Deal with the remaining bytes and padding
+    if (byteRemainder == 1) {
+        chunk = bytes[mainLength];
+        a = (chunk & 252) >> 2; // 252 = (2^6 - 1) << 2
+        // Set the 4 least significant bits to zero
+        b = (chunk & 3) << 4; // 3   = 2^2 - 1
+        base64 += encodings[a] + encodings[b] + '==';
+    }
+    else if (byteRemainder == 2) {
+        chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1];
+        a = (chunk & 64512) >> 10; // 64512 = (2^6 - 1) << 10
+        b = (chunk & 1008) >> 4; // 1008  = (2^6 - 1) << 4
+        // Set the 2 least significant bits to zero
+        c = (chunk & 15) << 2; // 15    = 2^4 - 1
+        base64 += encodings[a] + encodings[b] + encodings[c] + '=';
+    }
+    return base64;
+}
 
 
 /***/ }),
@@ -320,6 +396,7 @@ class Root extends React.Component {
             current_inbox: null,
             current_email_info: null,
             current_email: null,
+            current_attachment: null,
             handler: new websocket_1.Handler(this),
             authenticated: false,
             failed_login: false,
@@ -351,6 +428,11 @@ class Root extends React.Component {
             else {
                 return {};
             }
+        });
+    }
+    attachment_loaded(attachment) {
+        this.setState({
+            current_attachment: attachment
         });
     }
     email_loaded(email) {
@@ -402,7 +484,7 @@ class Root extends React.Component {
             React.createElement("div", { className: "row" },
                 React.createElement("div", { className: "col-md-4" },
                     React.createElement(Menu_1.Menu, { inboxes: this.state.inboxes, emails: this.state.emails, onInboxSelected: this.select_inbox.bind(this), onEmailSelected: this.select_email.bind(this), active_inbox: this.state.current_inbox, active_email: this.state.current_email })),
-                React.createElement("div", { className: "col-md-8" }, this.state.current_email ? React.createElement(MailRenderer_1.MailRenderer, { email: this.state.current_email }) : null)));
+                React.createElement("div", { className: "col-md-8" }, this.state.current_email ? React.createElement(MailRenderer_1.MailRenderer, { email: this.state.current_email, active_attachment: this.state.current_attachment, handler: this.state.handler }) : null)));
     }
 }
 exports.Root = Root;
@@ -444,8 +526,6 @@ class Handler {
         this.reconnect_timeout = null;
         this.handler = handler;
         this.current_inbox = null;
-        this.current_email = null;
-        this.current_email_info = null;
         this.connect();
     }
     authenticate(username, password) {
@@ -472,7 +552,13 @@ class Handler {
                 load_email: email
             }));
         }
-        this.current_email_info = email;
+    }
+    load_attachment(attachment) {
+        if (this.socket) {
+            this.socket.send(JSON.stringify({
+                load_attachment: attachment
+            }));
+        }
     }
     connect() {
         this.socket = new WebSocket((document.location.protocol === "https:" ? "wss://" : "ws://") +
@@ -515,7 +601,9 @@ class Handler {
         }
         else if (json.email_loaded) {
             this.handler.email_loaded(json.email_loaded);
-            this.current_email = json.email_loaded;
+        }
+        else if (json.attachment_loaded) {
+            this.handler.attachment_loaded(json.attachment_loaded);
         }
         else if (json.authenticate_result === true || json.authenticate_result === false) {
             this.handler.authenticate_result(json.authenticate_result);

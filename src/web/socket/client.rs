@@ -6,7 +6,8 @@ use actix::{
 use actix_web::ws;
 use data::models::email::{Email, EmailInfo};
 use data::models::inbox::InboxWithAddress;
-use data::{ListAddresses, LoadEmail, LoadInbox, LoadInboxResponse, NewEmail};
+use data::models::email_attachment::{Attachment, AttachmentInfo};
+use data::{ListAddresses, LoadEmail, LoadInbox, LoadInboxResponse, NewEmail, LoadAttachment};
 use serde_json::{self, Value};
 use std::env;
 use web::State as ServerState;
@@ -78,6 +79,14 @@ impl Client {
         assert!(self.authenticated);
         context.text(serde_json::to_string(&Init { init }).unwrap());
     }
+    fn send_attachment(
+        &self,
+        context: &mut ws::WebsocketContext<Self, ServerState>,
+        attachment_loaded: Attachment,
+    ) {
+        assert!(self.authenticated);
+        context.text(serde_json::to_string(&AttachmentLoaded { attachment_loaded }).unwrap());
+    }
 }
 
 impl Client {
@@ -101,6 +110,33 @@ impl Client {
                 match res {
                     Ok(Ok(res)) => {
                         act.send_email_loaded(ctx, res.email);
+                    }
+                    _ => ctx.stop(),
+                }
+                fut::ok(())
+            }).wait(ctx);
+    }
+
+    fn handle_load_attachment(&self, d: &Map, ctx: &mut <Self as Actor>::Context) {
+        if !self.authenticated {
+            ctx.text(String::from("{{\"error\":\"Not authenticated\"}}"));
+            return;
+        }
+        let attachment_info: AttachmentInfo = match serde_json::from_value(Value::Object(d.clone())) {
+            Ok(info) => info,
+            Err(e) => {
+                println!("Could not parse json from client. {:?}", e);
+                return;
+            }
+        };
+        ctx.state()
+            .database
+            .send(LoadAttachment(attachment_info))
+            .into_actor(self)
+            .then(|res, act, ctx| {
+                match res {
+                    Ok(Ok(res)) => {
+                        act.send_attachment(ctx, res.attachment);
                     }
                     _ => ctx.stop(),
                 }
@@ -189,6 +225,11 @@ struct EmailReceived {
     pub email_received: EmailInfo,
 }
 
+#[derive(Serialize)]
+struct AttachmentLoaded {
+    pub attachment_loaded: Attachment,
+}
+
 impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
     fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
         match msg {
@@ -211,6 +252,10 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                 }
                 if let Value::Object(d) = &data["load_email"] {
                     self.handle_load_email(d, ctx);
+                    return;
+                }
+                if let Value::Object(d) = &data["load_attachment"] {
+                    self.handle_load_attachment(d, ctx);
                     return;
                 }
                 println!("Unknown json from websocket client {:?}", text);

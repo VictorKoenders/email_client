@@ -2,9 +2,19 @@ namespace server {
     export interface WebSocketMessage {
         email_received?: EmailInfo;
         email_loaded?: Email;
+        attachment_loaded?: Attachment;
         inbox_loaded?: InboxLoaded;
         init?: Inbox[];
         authenticate_result?: boolean;
+    }
+
+    export interface Attachment {
+        id: string;
+        headers: {[key: string]: string};
+        mime_type: string;
+        name: string | null;
+        content_id: string | null;
+        contents: number[];
     }
 
     export interface EmailInfo {

@@ -10,6 +10,7 @@ interface State {
     current_inbox: server.Inbox | null;
     current_email_info: server.EmailInfo | null;
     current_email: server.Email | null;
+    current_attachment: server.Attachment | null;
     handler: Handler;
     authenticated: boolean;
     failed_login: boolean;
@@ -28,6 +29,7 @@ export class Root extends React.Component<Props, State> {
             current_inbox: null,
             current_email_info: null,
             current_email: null,
+            current_attachment: null,
             handler: new Handler(this),
             authenticated: false,
             failed_login: false,
@@ -64,6 +66,11 @@ export class Root extends React.Component<Props, State> {
         });
     }
 
+    attachment_loaded(attachment: server.Attachment) {
+        this.setState({
+            current_attachment: attachment
+        });
+    }
     email_loaded(email: server.Email) {
         this.setState(state => {
             if (state.current_email_info && state.current_email_info.id == email.id) {
@@ -130,7 +137,7 @@ export class Root extends React.Component<Props, State> {
                     />
                 </div>
                 <div className="col-md-8">
-                    {this.state.current_email ? <MailRenderer email={this.state.current_email} /> : null}
+                    {this.state.current_email ? <MailRenderer email={this.state.current_email} active_attachment={this.state.current_attachment} handler={this.state.handler} /> : null}
                 </div>
             </div>
         </div>;

@@ -5,5 +5,6 @@ pub mod schema;
 
 pub use self::database::{AddNewEmailListener, Database, NewEmail};
 pub use self::messages::{
-    ListAddressResult, ListAddresses, LoadEmail, LoadEmailResponse, LoadInbox, LoadInboxResponse,
+    ListAddressResult, ListAddresses, LoadAttachment, LoadAttachmentResponse, LoadEmail,
+    LoadEmailResponse, LoadInbox, LoadInboxResponse,
 };

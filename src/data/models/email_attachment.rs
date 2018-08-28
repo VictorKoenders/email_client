@@ -5,8 +5,9 @@ use diesel::pg::PgConnection;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 use Result;
+use std::collections::HashMap;
 
-#[derive(Debug, Serialize, Queryable)]
+#[derive(Debug, Serialize, Deserialize, Queryable)]
 pub struct AttachmentInfo {
     pub id: Uuid,
     pub mime_type: String,
@@ -37,7 +38,24 @@ impl AttachmentInfo {
     }
 }
 
-pub struct Attachment {}
+#[derive(Debug, Serialize)]
+pub struct Attachment {
+    pub id: Uuid,
+    pub headers: HashMap<String, String>,
+    pub mime_type: String,
+    pub name: Option<String>,
+    pub content_id: Option<String>,
+    pub contents: Vec<u8>,
+}
+
+#[derive(Queryable)]
+pub struct AttachmentLoader {
+    pub id: Uuid,
+    pub mime_type: String,
+    pub name: Option<String>,
+    pub content_id: Option<String>,
+    pub contents: Vec<u8>,
+}
 
 impl Attachment {
     pub fn save(
@@ -58,6 +76,27 @@ impl Attachment {
             .get_result(connection)?;
         AttachmentHeader::save(connection, &uuid, attachment.headers.iter())?;
         Ok(())
+    }
+
+    pub fn load_by_id(connection: &PgConnection, id: &Uuid) -> Result<Attachment> {
+        let result: AttachmentLoader = email_attachment::table.select((
+            email_attachment::dsl::id,
+            email_attachment::dsl::mime_type,
+            email_attachment::dsl::name,
+            email_attachment::dsl::content_id,
+            email_attachment::dsl::contents,
+        )).find(id).get_result(connection)?;
+
+        let headers = AttachmentHeader::load_by_attachment(connection, id)?;
+
+        Ok(Attachment{
+            id: result.id,
+            headers,
+            mime_type: result.mime_type,
+            name: result.name,
+            content_id: result.content_id,
+            contents: result.contents,
+        })
     }
 }
 
