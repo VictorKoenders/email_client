@@ -51,7 +51,7 @@ fn main() {
         return;
     }
 
-    let runner = System::new("Email server");
+    let _runner = System::new("Email server");
 
     ctrlc::set_handler(move || {
         Arbiter::current().try_send(StopArbiter(0)).expect("Could not send stop signal to the arbiter");
@@ -79,6 +79,4 @@ fn main() {
     }
 
     web::serve(ws_server, database);
-
-    runner.run();
 }
