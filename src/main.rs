@@ -19,8 +19,8 @@ extern crate uuid;
 #[macro_use]
 extern crate diesel;
 extern crate clap;
-extern crate html_sanitizer;
 extern crate ctrlc;
+extern crate html_sanitizer;
 
 pub mod attachment;
 pub mod data;
@@ -28,7 +28,8 @@ pub mod mail_reader;
 pub mod message;
 pub mod web;
 
-use actix::{ArbiterService, System};
+use actix::msgs::StopArbiter;
+use actix::{Arbiter, ArbiterService, System};
 use clap::{App, Arg};
 
 pub type Result<T> = std::result::Result<T, failure::Error>;
@@ -41,7 +42,8 @@ fn main() {
             Arg::with_name("reset")
                 .long("reset")
                 .help("Resets all emails and the database, then exits"),
-        ).get_matches();
+        )
+        .get_matches();
 
     if matches.is_present("reset") {
         data::Database::clear();
@@ -52,7 +54,7 @@ fn main() {
     let runner = System::new("Email server");
 
     ctrlc::set_handler(move || {
-        System::current().stop();
+        Arbiter::current().try_send(StopArbiter(0)).expect("Could not send stop signal to the arbiter");
     }).expect("Error setting Ctrl-C handler");
 
     let ws_server = web::WebsocketServer::start_service();
