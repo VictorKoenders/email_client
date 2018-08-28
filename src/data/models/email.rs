@@ -48,6 +48,7 @@ pub struct EmailFromImap<'a> {
     pub subject: &'a str,
     pub text_plain_body: &'a str,
     pub html_body: Option<&'a str>,
+    pub html_body_raw: Option<&'a str>,
     pub raw: &'a [u8],
 }
 
@@ -70,6 +71,7 @@ impl<'a> EmailFromImap<'a> {
                 subject: &message.to,
                 text_plain_body: &message.plain_text_body,
                 html_body: message.html_body.as_ref().map(|s| s.as_str()),
+                html_body_raw: message.html_body_raw.as_ref().map(|s| s.as_str()),
                 raw: &message.raw,
             };
             let result: EmailInfo = ::diesel::insert_into(email::table)

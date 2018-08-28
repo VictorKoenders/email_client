@@ -165,14 +165,45 @@ const React = __webpack_require__(/*! react */ "react");
 class MailRenderer extends React.Component {
     constructor(props, context) {
         super(props, context);
-        this.state = {};
+        this.state = {
+            show_html: false,
+        };
+    }
+    set_show_html(show_html, ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        this.setState({ show_html });
+        return false;
+    }
+    render_attachments() {
+        const attachments = [];
+        for (const attachment of this.props.email.attachments) {
+            const name = attachment.name || ("unknown " + attachment.mime_type);
+            attachments.push(React.createElement("button", { type: "button", className: "btn btn-secondary", key: attachment.id }, name));
+        }
+        if (attachments.length > 0) {
+            return React.createElement(React.Fragment, null,
+                React.createElement("div", { className: "btn-group", role: "group", "aria-label": "Attachments" }, attachments),
+                React.createElement("br", null));
+        }
+        return null;
+    }
+    render_text_html_tabs() {
+        return React.createElement("ul", { className: "nav nav-tabs" },
+            React.createElement("li", { className: "nav-item" },
+                React.createElement("a", { className: "nav-link" + (this.state.show_html ? "" : " active"), href: "#", onClick: this.set_show_html.bind(this, false) }, "Plain text")),
+            React.createElement("li", { className: "nav-item" },
+                React.createElement("a", { className: "nav-link" + (this.state.show_html ? " active" : ""), href: "#", onClick: this.set_show_html.bind(this, true) }, "HTML")));
     }
     render_body() {
-        if (!this.props.email.text_plain_body)
-            return null;
-        return this.props.email.text_plain_body.split('\n').map((p, i) => React.createElement(React.Fragment, { key: i },
-            p,
-            React.createElement("br", null)));
+        if (this.state.show_html) {
+            return React.createElement("div", { dangerouslySetInnerHTML: { __html: this.props.email.html_body || "" } });
+        }
+        else {
+            return (this.props.email.text_plain_body || "").split('\n').map((p, i) => React.createElement(React.Fragment, { key: i },
+                p,
+                React.createElement("br", null)));
+        }
     }
     render() {
         return React.createElement("div", null,
@@ -182,6 +213,8 @@ class MailRenderer extends React.Component {
             this.props.email.to,
             React.createElement("br", null),
             React.createElement("br", null),
+            this.render_attachments(),
+            this.props.email.html_body ? this.render_text_html_tabs() : null,
             this.render_body());
     }
 }

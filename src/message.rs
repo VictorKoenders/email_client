@@ -14,6 +14,7 @@ pub struct Message {
     pub subject: String,
     pub plain_text_body: String,
     pub html_body: Option<String>,
+    pub html_body_raw: Option<String>,
     pub attachments: Vec<Attachment>,
     pub raw: Vec<u8>,
 }
@@ -67,20 +68,26 @@ impl Message {
 
                 let mail = flatten(&mail);
 
-                message.plain_text_body = match mail.iter().find(|p| p.ctype.mimetype == "text/plain").map(|p| p.get_body()) {
+                message.plain_text_body = match mail
+                    .iter()
+                    .find(|p| p.ctype.mimetype == "text/plain")
+                    .map(|p| p.get_body())
+                {
                     Some(Ok(body)) => body,
                     x => format!("Could not retreive text/plain body: {:?}", x),
                 };
 
                 if let Some(html_subpart) = mail.iter().find(|p| p.ctype.mimetype == "text/html") {
-                    message.html_body = match html_subpart.get_body() {
-                        Ok(body) => Some(body),
+                    let html_body_raw = match html_subpart.get_body() {
+                        Ok(body) => body,
                         Err(e) => bail!(
                             "Could not get text/html body of imap_index {:?}: {:?}",
                             imap_index,
                             e
                         ),
                     };
+                    message.html_body = Some(sanitizer(&html_body_raw));
+                    message.html_body_raw = Some(html_body_raw);
                 }
 
                 for attachment in mail.iter().filter(|part| {
@@ -89,7 +96,9 @@ impl Message {
                     if attachment.ctype.mimetype.starts_with("multipart/") {
                         match attachment.get_body() {
                             Ok(ref s) if !s.trim().is_empty() => {
-                                message.attachments.push(Attachment::from_parsed_mail(attachment)?);
+                                message
+                                    .attachments
+                                    .push(Attachment::from_parsed_mail(attachment)?);
                             }
                             _ => {}
                         }
@@ -129,4 +138,33 @@ impl Message {
         }
         Ok(())
     }*/
+}
+
+fn sanitizer(input: &str) -> String {
+    let mut parser = ::std::io::BufReader::new(input.as_bytes());
+    let mut parser = ::html_sanitizer::TagParser::new(&mut parser);
+    parser.walk(|tag| {
+        if tag.name == "html" || tag.name == "body" {
+            tag.ignore_self();
+        } else if tag.name == "head" || tag.name == "script" || tag.name == "style" {
+            tag.ignore_self_and_contents();
+        } else if tag.name == "a" {
+            tag.allow_attribute(String::from("href"));
+        } else if tag.name == "img" {
+            if let Some(url) = tag
+                .attrs
+                .iter()
+                .find(|(key, _)| key == &"src")
+                .map(|(_, url)| url)
+            {
+                let name = match url.rfind('/') {
+                    Some(i) => &url[i + 1..],
+                    None => "Load image",
+                };
+                tag.rewrite_as(format!("<a href=\"{0}\" onclick=\"return replace_url_by_image(this);\" title=\"{0}\">{1}</a>", url, name));
+            }
+        } else {
+            tag.allow_attribute(String::from("style"));
+        }
+    })
 }

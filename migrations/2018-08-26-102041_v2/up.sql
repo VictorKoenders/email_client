@@ -26,6 +26,7 @@ CREATE TABLE email (
     subject TEXT NULL,
     text_plain_body TEXT NULL,
     html_body TEXT NULL,
+    html_body_raw TEXT NULL,
     raw BYTEA NOT NULL,
     read BOOLEAN NOT NULL DEFAULT false
 );

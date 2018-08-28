@@ -19,6 +19,7 @@ extern crate uuid;
 #[macro_use]
 extern crate diesel;
 extern crate clap;
+extern crate html_sanitizer;
 
 pub mod attachment;
 pub mod data;

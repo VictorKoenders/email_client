@@ -8,6 +8,7 @@ table! {
         subject -> Nullable<Text>,
         text_plain_body -> Nullable<Text>,
         html_body -> Nullable<Text>,
+        html_body_raw -> Nullable<Text>,
         raw -> Bytea,
         read -> Bool,
     }
