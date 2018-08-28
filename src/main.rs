@@ -20,6 +20,7 @@ extern crate uuid;
 extern crate diesel;
 extern crate clap;
 extern crate html_sanitizer;
+extern crate ctrlc;
 
 pub mod attachment;
 pub mod data;
@@ -49,6 +50,10 @@ fn main() {
     }
 
     let runner = System::new("Email server");
+
+    ctrlc::set_handler(move || {
+        System::current().stop();
+    }).expect("Error setting Ctrl-C handler");
 
     let ws_server = web::WebsocketServer::start_service();
     let database = data::Database::start_service();
