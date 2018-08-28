@@ -31,7 +31,7 @@ impl Handler<Connect> for Server {
     fn handle(&mut self, msg: Connect, _ctx: &mut Context<Self>) -> usize {
         let id = self.next_id;
         self.clients.insert(id, msg.client_addr);
-        println!("Accepting incoming client {}", id);
+        println!("Accepting incoming client {}", msg.remote_addr);
         self.next_id += 1;
         id
     }
@@ -40,7 +40,6 @@ impl Handler<Connect> for Server {
 impl Handler<Disconnect> for Server {
     type Result = ();
     fn handle(&mut self, msg: Disconnect, _ctx: &mut Context<Self>) -> () {
-        println!("Dropping client {}", msg.id);
         self.clients.remove(&msg.id);
     }
 }

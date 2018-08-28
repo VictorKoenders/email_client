@@ -3,9 +3,9 @@ use attachment::Attachment as ImapAttachment;
 use data::schema::email_attachment;
 use diesel::pg::PgConnection;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use std::collections::HashMap;
 use uuid::Uuid;
 use Result;
-use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, Queryable)]
 pub struct AttachmentInfo {
@@ -35,13 +35,7 @@ impl AttachmentInfo {
                 email_attachment::dsl::mime_type,
                 email_attachment::dsl::name,
                 email_attachment::dsl::content_id,
-            ))
-            .filter(email_attachment::dsl::email_id.eq(email_id));
-
-        println!(
-            "attachment_info load_by_email: {:?}",
-            ::diesel::debug_query::<::diesel::pg::Pg, _>(&query)
-        );
+            )).filter(email_attachment::dsl::email_id.eq(email_id));
 
         query.get_results(connection).map_err(Into::into)
     }
@@ -88,17 +82,19 @@ impl Attachment {
     }
 
     pub fn load_by_id(connection: &PgConnection, id: &Uuid) -> Result<Attachment> {
-        let result: AttachmentLoader = email_attachment::table.select((
-            email_attachment::dsl::id,
-            email_attachment::dsl::mime_type,
-            email_attachment::dsl::name,
-            email_attachment::dsl::content_id,
-            email_attachment::dsl::contents,
-        )).find(id).get_result(connection)?;
+        let result: AttachmentLoader = email_attachment::table
+            .select((
+                email_attachment::dsl::id,
+                email_attachment::dsl::mime_type,
+                email_attachment::dsl::name,
+                email_attachment::dsl::content_id,
+                email_attachment::dsl::contents,
+            )).find(id)
+            .get_result(connection)?;
 
         let headers = AttachmentHeader::load_by_attachment(connection, id)?;
 
-        Ok(Attachment{
+        Ok(Attachment {
             id: result.id,
             headers,
             mime_type: result.mime_type,

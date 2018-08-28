@@ -36,7 +36,7 @@ export class MailRenderer extends React.Component<Props, State> {
         ev.preventDefault();
         ev.stopPropagation();
 
-        document.location.href = "/attachment/" + attachment.id;
+        document.location.href = "attachment/" + attachment.id;
 
         return false;
     }
@@ -113,7 +113,7 @@ export class MailRenderer extends React.Component<Props, State> {
                     </div>
                     <div className="modal-footer">
                         {this.props.active_attachment
-                            ? <a href={"/attachment/" + this.props.active_attachment.id} className="btn btn-default">Download</a>
+                            ? <a href={"attachment/" + this.props.active_attachment.id} className="btn btn-default">Download</a>
                             : null
                         }
                         <button type="button" className="btn btn-primary" data-dismiss="modal">Close</button>

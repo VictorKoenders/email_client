@@ -19,8 +19,7 @@ impl AttachmentHeader {
             .select((
                 email_attachment_header::dsl::key,
                 email_attachment_header::dsl::value,
-            ))
-            .filter(email_attachment_header::dsl::email_attachment_id.eq(id))
+            )).filter(email_attachment_header::dsl::email_attachment_id.eq(id))
             .get_results(connection)?;
 
         let mut map = HashMap::with_capacity(result.len());

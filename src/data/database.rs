@@ -76,10 +76,10 @@ impl Handler<ImapMessage> for Database {
         let connection = self.pool.get().expect("Could not get connection");
         match message {
             ImapMessage::NewMessage(message) => {
-                println!("Saving Imap ID {}", message.imap_index);
+                print!("Saving Imap ID {}", message.imap_index);
                 match EmailFromImap::save(&connection, &message) {
                     Ok(m) => {
-                        println!("Saved email {:?}", m.id);
+                        println!(" as email ID {:?}", m.id);
                         for listener in &self.listeners {
                             listener
                                 .do_send(NewEmail(m.clone()))
@@ -87,10 +87,7 @@ impl Handler<ImapMessage> for Database {
                         }
                     }
                     Err(e) => {
-                        println!(
-                            "Could not save email with IMAP_INDEX {}: {:?}",
-                            message.imap_index, e
-                        );
+                        println!(", failed: {:?}", e);
                         match EmailFromImap::save_empty(&connection, &message) {
                             Ok(_) => {}
                             Err(e) => {

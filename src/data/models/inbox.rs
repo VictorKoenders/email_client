@@ -37,14 +37,9 @@ impl InboxWithAddress {
                     email::dsl::inbox_id
                         .eq(inbox::dsl::id)
                         .and(email::dsl::read.eq(false)),
-                )
-                .select(count_star())
+                ).select(count_star())
                 .single_value(),
         ));
-        println!(
-            "inbox load: {:?}",
-            ::diesel::debug_query::<::diesel::pg::Pg, _>(&query)
-        );
         let inboxes: Vec<InboxWithUnread> = query.get_results(connection)?;
         let addresses: Vec<(Uuid, String)> = inbox_address::table.get_results(connection)?;
         Ok(inboxes
@@ -58,13 +53,11 @@ impl InboxWithAddress {
                         } else {
                             None
                         }
-                    })
-                    .collect(),
+                    }).collect(),
                 id: inbox.id,
                 name: inbox.name,
                 unread_count: inbox.unread_count.unwrap_or(0) as i32,
-            })
-            .collect())
+            }).collect())
     }
 
     pub fn load_by_id(connection: &PgConnection, id: &Uuid) -> Result<InboxWithAddress> {
@@ -77,15 +70,9 @@ impl InboxWithAddress {
                         email::dsl::inbox_id
                             .eq(inbox::dsl::id)
                             .and(email::dsl::read.eq(false)),
-                    )
-                    .select(count_star())
+                    ).select(count_star())
                     .single_value(),
-            ))
-            .find(id);
-        println!(
-            "inbox load_by_id: {:?}",
-            ::diesel::debug_query::<::diesel::pg::Pg, _>(&query)
-        );
+            )).find(id);
         let inbox: InboxWithUnread = query.get_result(connection)?;
         /*::diesel::sql_query(
             "SELECT id, name, (SELECT COUNT(*) FROM email WHERE email.inbox_id == inbox.id AND email.read = false) AS unread_count FROM inbox WHERE id = $1"
@@ -112,23 +99,14 @@ pub struct Inbox {
 
 impl Inbox {
     pub fn try_load_by_address(connection: &PgConnection, address: &str) -> Result<Option<Inbox>> {
-        let query = inbox::table
-            .select((inbox::id, inbox::name))
-            .filter(exists(
-                inbox_address::table.filter(
-                    inbox_address::inbox_id
-                        .eq(inbox::id)
-                        .and(inbox_address::address.eq(address)),
-                ),
-            ));
-        
-        println!(
-            "inbox try_load_by_address: {:?}",
-            ::diesel::debug_query::<::diesel::pg::Pg, _>(&query)
-        );
-        query
-            .get_result(connection)
-            .optional()
-            .map_err(Into::into)
+        let query = inbox::table.select((inbox::id, inbox::name)).filter(exists(
+            inbox_address::table.filter(
+                inbox_address::inbox_id
+                    .eq(inbox::id)
+                    .and(inbox_address::address.eq(address)),
+            ),
+        ));
+
+        query.get_result(connection).optional().map_err(Into::into)
     }
 }

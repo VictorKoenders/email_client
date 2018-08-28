@@ -5,11 +5,13 @@ use actix::{
 };
 use actix_web::ws;
 use data::models::email::{Email, EmailInfo};
-use data::models::inbox::InboxWithAddress;
 use data::models::email_attachment::{Attachment, AttachmentInfo};
-use data::{ListAddresses, LoadEmail, LoadInbox, LoadInboxResponse, NewEmail, LoadAttachment};
+use data::models::inbox::InboxWithAddress;
+use data::{ListAddresses, LoadAttachment, LoadEmail, LoadInbox, LoadInboxResponse, NewEmail};
 use serde_json::{self, Value};
 use std::env;
+use std::net::SocketAddr;
+use std::str::FromStr;
 use web::State as ServerState;
 
 type Map = ::serde_json::Map<String, Value>;
@@ -20,14 +22,37 @@ pub struct Client {
     authenticated: bool,
 }
 
+trait RequestIp {
+    fn get_ip(&self) -> SocketAddr;
+}
+impl RequestIp for ::actix_web::HttpRequest<ServerState> {
+    fn get_ip(&self) -> SocketAddr {
+        if let Some(ip) = self.headers().get("x-real-ip") {
+            if let Ok(s) = ip.to_str() {
+                match SocketAddr::from_str(s) {
+                    Ok(s) => return s,
+                    Err(e) => {
+                        println!("Could not parse x-real-ip {:?}: {:?}", s, e);
+                    }
+                }
+            }
+        }
+        self.peer_addr().unwrap_or_else(|| ([0, 0, 0, 0], 0).into())
+    }
+}
+
 impl Actor for Client {
     type Context = ws::WebsocketContext<Self, ServerState>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
+        let remote_addr = ctx.request().get_ip();
         let client_addr = ctx.address();
         ctx.state()
             .websocket_server
-            .send(Connect { client_addr })
+            .send(Connect {
+                client_addr,
+                remote_addr,
+            })
             .into_actor(self)
             .then(|res, act, ctx| {
                 match res {
@@ -35,7 +60,8 @@ impl Actor for Client {
                     _ => ctx.stop(),
                 }
                 fut::ok(())
-            }).wait(ctx);
+            })
+            .wait(ctx);
     }
     fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
         ctx.state()
@@ -114,7 +140,8 @@ impl Client {
                     _ => ctx.stop(),
                 }
                 fut::ok(())
-            }).wait(ctx);
+            })
+            .wait(ctx);
     }
 
     fn handle_load_attachment(&self, d: &Map, ctx: &mut <Self as Actor>::Context) {
@@ -122,7 +149,8 @@ impl Client {
             ctx.text(String::from("{{\"error\":\"Not authenticated\"}}"));
             return;
         }
-        let attachment_info: AttachmentInfo = match serde_json::from_value(Value::Object(d.clone())) {
+        let attachment_info: AttachmentInfo = match serde_json::from_value(Value::Object(d.clone()))
+        {
             Ok(info) => info,
             Err(e) => {
                 println!("Could not parse json from client. {:?}", e);
@@ -141,7 +169,8 @@ impl Client {
                     _ => ctx.stop(),
                 }
                 fut::ok(())
-            }).wait(ctx);
+            })
+            .wait(ctx);
     }
 
     fn handle_load_inbox(&self, d: &Map, ctx: &mut <Self as Actor>::Context) {
@@ -168,7 +197,8 @@ impl Client {
                     _ => ctx.stop(),
                 }
                 fut::ok(())
-            }).wait(ctx);
+            })
+            .wait(ctx);
     }
 
     fn handle_authenticate(&mut self, d: &Map, ctx: &mut <Self as Actor>::Context) {
@@ -200,7 +230,8 @@ impl Client {
                         _ => ctx.stop(),
                     }
                     fut::ok(())
-                }).wait(ctx);
+                })
+                .wait(ctx);
         }
     }
 }
@@ -264,8 +295,7 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                 println!("Unknown binary blob from client, ignoring");
             }
             ws::Message::Pong(_msg) => {}
-            ws::Message::Close(msg) => {
-                println!("Client closed: {:?}", msg);
+            ws::Message::Close(_msg) => {
                 ctx.close(None);
             }
         }

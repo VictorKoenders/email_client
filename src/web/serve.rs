@@ -28,7 +28,12 @@ pub fn download_attachment(
 ) -> Box<Future<Item = HttpResponse, Error = ::std::io::Error>> {
     let id = match req.match_info().get("id").map(Uuid::parse_str) {
         Some(Ok(id)) => id,
-        x => return Box::new(future::ok(req.response(StatusCode::NOT_FOUND, format!("Expected uuid, got {:?}", x).into()))),
+        x => {
+            return Box::new(future::ok(req.response(
+                StatusCode::NOT_FOUND,
+                format!("Expected uuid, got {:?}", x).into(),
+            )))
+        }
     };
 
     Box::new(
@@ -48,8 +53,7 @@ pub fn download_attachment(
                                     .name
                                     .unwrap_or_else(|| String::from("unknown"))
                             ),
-                        )
-                        .body(res.attachment.contents),
+                        ).body(res.attachment.contents),
                 ),
                 x => future::ok(HttpResponse::InternalServerError().body(format!("{:?}", x))),
             }),

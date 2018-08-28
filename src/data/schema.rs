@@ -2,6 +2,7 @@ table! {
     email (id) {
         id -> Uuid,
         inbox_id -> Uuid,
+        created_on -> Timestamptz,
         imap_index -> Int4,
         from -> Nullable<Text>,
         to -> Nullable<Text>,

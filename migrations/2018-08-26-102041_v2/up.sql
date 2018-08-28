@@ -20,6 +20,7 @@ INSERT INTO inbox_address VALUES ('00000000-0000-0000-0000-000000000000', '*@tra
 CREATE TABLE email (
     id UUID NOT NULL PRIMARY KEY DEFAULT uuid_generate_v4(),
     inbox_id UUID NOT NULL REFERENCES inbox(id),
+    created_on TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     imap_index INTEGER NOT NULL UNIQUE,
     "from" TEXT NULL,
     "to" TEXT NULL,

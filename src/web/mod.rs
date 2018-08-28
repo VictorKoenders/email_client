@@ -3,7 +3,7 @@ pub mod socket;
 
 pub use self::socket::Server as WebsocketServer;
 
-use self::serve::{bundle, bundle_map, index, style, download_attachment};
+use self::serve::{bundle, bundle_map, download_attachment, index, style};
 use self::socket::ws_start;
 use actix::Addr;
 use actix_web::{server, App};

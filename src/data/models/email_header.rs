@@ -29,10 +29,6 @@ impl EmailHeaders {
         let query = email_header::table
             .select((email_header::key, email_header::value))
             .filter(email_header::email_id.eq(email_id));
-        println!(
-            "email_header load_by_email: {:?}",
-            ::diesel::debug_query::<::diesel::pg::Pg, _>(&query)
-        );
         let result: Vec<(String, String)> = query.get_results(connection)?;
         Ok(EmailHeaders(result.into_iter().collect()))
     }

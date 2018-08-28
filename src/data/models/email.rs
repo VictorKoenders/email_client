@@ -28,12 +28,8 @@ impl EmailInfo {
                 email::dsl::to,
                 email::dsl::subject,
                 email::dsl::read,
-            ))
-            .filter(email::inbox_id.eq(uuid));
-        println!(
-            "email load_by_inbox: {:?}",
-            ::diesel::debug_query::<::diesel::pg::Pg, _>(&query)
-        );
+            )).filter(email::inbox_id.eq(uuid))
+            .order_by(email::dsl::created_on.desc());
         query.get_results(connection).map_err(Into::into)
     }
 }
@@ -83,8 +79,7 @@ impl<'a> EmailFromImap<'a> {
                     email::dsl::to,
                     email::dsl::subject,
                     email::dsl::read,
-                ))
-                .get_result(connection)?;
+                )).get_result(connection)?;
 
             EmailHeaders::save(connection, &result.id, message.headers.iter())?;
             for attachment in &message.attachments {
@@ -149,8 +144,7 @@ impl Email {
                 email::imap_index,
                 email::text_plain_body,
                 email::html_body,
-            ))
-            .get_result(connection)?;
+            )).get_result(connection)?;
 
         if !email.read {
             ::diesel::update(email::table.find(id))
