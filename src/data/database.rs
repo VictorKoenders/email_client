@@ -28,6 +28,30 @@ impl Default for Database {
     }
 }
 
+impl Database {
+    pub fn clear() {
+        use super::schema::*;
+        use diesel::RunQueryDsl;
+
+        let database = Self::default();
+        let connection = database.pool.get().unwrap();
+
+        ::diesel::delete(email_attachment_header::table)
+            .execute(&*connection)
+            .expect("Could not clear table attachment_header");
+        ::diesel::delete(email_attachment::table)
+            .execute(&*connection)
+            .expect("Could not clear table attachment");
+        ::diesel::delete(email_header::table)
+            .execute(&*connection)
+            .expect("Could not clear table email_header");
+        ::diesel::delete(email::table)
+            .execute(&*connection)
+            .expect("Could not clear table email");
+        println!("[Database] Cleared");
+    }
+}
+
 #[derive(Message)]
 pub struct AddNewEmailListener(pub Recipient<NewEmail>);
 
@@ -49,30 +73,34 @@ impl Handler<ImapMessage> for Database {
     fn handle(&mut self, message: ImapMessage, _context: &mut Self::Context) {
         let connection = self.pool.get().expect("Could not get connection");
         match message {
-            ImapMessage::NewMessage(message) => match EmailFromImap::save(&connection, &message) {
-                Ok(m) => {
-                    for listener in &self.listeners {
-                        listener
-                            .do_send(NewEmail(m.clone()))
-                            .expect("[Database] Could not send new email to listeners");
+            ImapMessage::NewMessage(message) => {
+                println!("Saving Imap ID {}", message.imap_index);
+                match EmailFromImap::save(&connection, &message) {
+                    Ok(m) => {
+                        println!("Saved email {:?}", m.id);
+                        for listener in &self.listeners {
+                            listener
+                                .do_send(NewEmail(m.clone()))
+                                .expect("[Database] Could not send new email to listeners");
+                        }
                     }
-                }
-                Err(e) => {
-                    println!(
-                        "Could not save email with IMAP_INDEX {}: {:?}",
-                        message.imap_index, e
-                    );
-                    match EmailFromImap::save_empty(&connection, &message) {
-                        Ok(_) => {}
-                        Err(e) => {
-                            eprintln!(
-                                "Could not save email with IMAP_INDEX {}: {:?}",
-                                message.imap_index, e
-                            );
+                    Err(e) => {
+                        println!(
+                            "Could not save email with IMAP_INDEX {}: {:?}",
+                            message.imap_index, e
+                        );
+                        match EmailFromImap::save_empty(&connection, &message) {
+                            Ok(_) => {}
+                            Err(e) => {
+                                eprintln!(
+                                    "Could not save email with IMAP_INDEX {}: {:?}",
+                                    message.imap_index, e
+                                );
+                            }
                         }
                     }
                 }
-            },
+            }
         }
     }
 }

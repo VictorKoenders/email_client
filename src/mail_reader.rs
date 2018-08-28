@@ -1,8 +1,4 @@
-use actix::{
-    Actor, Addr, ArbiterService, AsyncContext, Context, Handler, Recipient, Supervised,
-    SystemRunner,
-};
-use data::Database;
+use actix::{Actor, ArbiterService, AsyncContext, Context, Handler, Recipient, Supervised};
 use failure::ResultExt;
 use message::Message;
 use native_tls::{Pkcs12, TlsConnector};
@@ -161,34 +157,21 @@ impl EmailParser {
                         .expect("Could not send message to recipient");
                 }
             }
-            /*let messages = self
-                .client
-                .fetch(key, "RFC822")
-                .with_context(|e| format!("Could not fetch IMAP message {}: {}", key, e))?;
-            if messages.len() != 1 {
-                println!("Mail {} has more than one message", key);
-            }
-            for message in messages.iter() {
-                if let Some(rfc822) = message.rfc822() {
-                    let message = ImapMessage::NewMessage(
-                        Message::from(rfc822).context("Could not parse Message")?,
-                    );
-                    for recipient in &self.message_recipients {
-                        recipient
-                            .do_send(message.clone())
-                            .expect("Could not send message to recipient");
-                    }
-                }
-            }*/
         }
         Ok(())
     }
 }
 
-pub fn run(database: Addr<Database>, _system: &SystemRunner) {
-    let addr = EmailParser::start_service();
-    addr.do_send(AddListener(database.recipient()));
+pub fn reset() {
+    let mut parser = EmailParser::default();
+    println!(
+        "[EmailParser] resetting seen flag: {:?}",
+        parser
+            .client
+            .store("1:*", "-FLAGS \\SEEN")
+            .map(|v| v.into_iter().map(|f| f.message).collect::<Vec<_>>())
+    );
 }
 
 #[derive(Message)]
-struct AddListener(pub Recipient<ImapMessage>);
+pub struct AddListener(pub Recipient<ImapMessage>);

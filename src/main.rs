@@ -18,6 +18,7 @@ extern crate serde_json;
 extern crate uuid;
 #[macro_use]
 extern crate diesel;
+extern crate clap;
 
 pub mod attachment;
 pub mod data;
@@ -26,16 +27,41 @@ pub mod message;
 pub mod web;
 
 use actix::{ArbiterService, System};
+use clap::{App, Arg};
 
 pub type Result<T> = std::result::Result<T, failure::Error>;
 
 fn main() {
     dotenv::dotenv().expect("Could not load .env file");
+
+    let matches = App::new("Email")
+        .arg(
+            Arg::with_name("reset")
+                .long("reset")
+                .help("Resets all emails and the database, then exits"),
+        )
+        .get_matches();
+
+    if matches.is_present("reset") {
+        data::Database::clear();
+        mail_reader::reset();
+        return;
+    }
+
     let runner = System::new("Email server");
 
     let ws_server = web::WebsocketServer::start_service();
     let database = data::Database::start_service();
+    let email_parser = mail_reader::EmailParser::start_service();
 
+    {
+        let recipient = database.clone().recipient();
+        email_parser
+            .clone()
+            .recipient()
+            .do_send(mail_reader::AddListener(recipient))
+            .expect("Could not register ws server to database");
+    }
     {
         let recipient = ws_server.clone().recipient();
         database
@@ -45,7 +71,6 @@ fn main() {
             .expect("Could not register ws server to database");
     }
 
-    mail_reader::run(database.clone(), &runner);
     web::serve(ws_server, database);
 
     runner.run();
