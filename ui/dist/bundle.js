@@ -524,6 +524,7 @@ window.replace_url_by_image = function (element) {
     const new_node = document.createElement("img");
     new_node.src = element.href;
     parent.replaceChild(new_node, element);
+    return false;
 };
 
 
