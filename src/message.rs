@@ -96,9 +96,13 @@ impl Message {
                 for attachment in mail.iter().filter(|part| {
                     part.ctype.mimetype != "text/plain" && part.ctype.mimetype != "text/html"
                 }) {
+                    const MULTIPART_MIME_MESSAGE: &str =
+                        "This is a multi-part message in MIME format.";
                     if attachment.ctype.mimetype.starts_with("multipart/") {
                         match attachment.get_body() {
-                            Ok(ref s) if !s.trim().is_empty() => {
+                            Ok(ref s)
+                                if !s.trim().is_empty() && s.trim() != MULTIPART_MIME_MESSAGE =>
+                            {
                                 message
                                     .attachments
                                     .push(Attachment::from_parsed_mail(attachment)?);
