@@ -1,8 +1,14 @@
 use attachment::Attachment;
 use failure::ResultExt;
+use lettre::smtp::authentication::{Credentials, Mechanism};
+use lettre::smtp::extension::ClientId;
+use lettre::smtp::SmtpTransportBuilder;
+use lettre::{ClientSecurity, EmailTransport};
+use lettre_email::EmailBuilder;
 use mail_reader::Client;
 use mailparse::{parse_mail, ParsedMail};
 use std::collections::HashMap;
+use std::env;
 use Result;
 
 #[derive(Clone, Debug, Serialize, Default)]
@@ -62,9 +68,6 @@ impl Message {
                         )
                     }
                 }
-                debug_assert!(!message.from.is_empty());
-                debug_assert!(!message.to.is_empty());
-                debug_assert!(!message.subject.is_empty());
 
                 let mail = flatten(&mail);
 
@@ -115,29 +118,6 @@ impl Message {
 
         Ok(result)
     }
-
-    /*
-    fn append(&mut self, part: &ParsedMail) -> Result<()> {
-        for header in &part.headers {
-            let key = header.get_key().context("Could not get header key")?;
-            let value = header.get_value().context("Could not get header value")?;
-            if key.to_lowercase() == "from" {
-                self.from = Some(value.clone());
-            } else if key.to_lowercase() == "to" {
-                self.to = Some(value.clone());
-            } else if key.to_lowercase() == "subject" {
-                self.subject = Some(value.clone());
-            }
-            *self.headers.entry(key).or_insert_with(String::new) += &value;
-        }
-        if let Ok(body) = part.get_body() {
-            self.content.push(body);
-        }
-        for sub in &part.subparts {
-            self.append(sub).context("Could not get ParsedMail sub")?;
-        }
-        Ok(())
-    }*/
 }
 
 fn sanitizer(input: &str) -> String {
@@ -167,4 +147,48 @@ fn sanitizer(input: &str) -> String {
             tag.allow_attribute(String::from("style"));
         }
     })
+}
+
+pub struct Outgoing {
+    pub from_email: String,
+    pub from_alias: String,
+    pub to_email: String,
+    pub to_alias: String,
+    pub subject: String,
+    pub body: String,
+}
+
+impl Outgoing {
+    pub fn send(self) -> Result<()> {
+        let email = EmailBuilder::new()
+        .to((self.to_email, self.to_alias))
+        // ... or by an address only
+        .from((self.from_email, self.from_alias))
+        .subject(self.subject)
+        .text(self.body)
+        .build()
+        .unwrap();
+
+        let host = env::var("SMTP_DOMAIN").expect("Missing environment variable SMTP_DOMAIN");
+        let port: u16 = env::var("SMTP_PORT")
+            .expect("Missing environment variable SMTP_PORT")
+            .parse()
+            .expect("SMTP_PORT is not a valid port");
+        let username =
+            env::var("IMAP_USERNAME").expect("Missing environment variable IMAP_USERNAME");
+        let password =
+            env::var("IMAP_PASSWORD").expect("Missing environment variable IMAP_PASSWORD");
+
+        // Open a local connection on port 25
+        let mut mailer = SmtpTransportBuilder::new((host.as_str(), port), ClientSecurity::None)
+            .unwrap()
+            .hello_name(ClientId::Domain(host))
+            .credentials(Credentials::new(username, password))
+            .smtp_utf8(true)
+            .authentication_mechanism(Mechanism::Plain)
+            .build();
+        // Send the email
+        mailer.send(&email)?;
+        Ok(())
+    }
 }

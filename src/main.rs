@@ -20,6 +20,8 @@ extern crate uuid;
 extern crate diesel;
 extern crate clap;
 extern crate html_sanitizer;
+extern crate lettre;
+extern crate lettre_email;
 
 pub mod attachment;
 pub mod data;
@@ -40,8 +42,7 @@ fn main() {
             Arg::with_name("reset")
                 .long("reset")
                 .help("Resets all emails and the database, then exits"),
-        )
-        .get_matches();
+        ).get_matches();
 
     if matches.is_present("reset") {
         data::Database::clear();
