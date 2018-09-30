@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Menu } from "./Menu";
 import { MailRenderer } from "./MailRenderer";
+import { AttachmentPopup } from "./AttachmentPopup";
 import { Handler } from "../websocket";
 import { Login } from "./Login";
 
@@ -137,8 +138,9 @@ export class Root extends React.Component<Props, State> {
                     />
                 </div>
                 <div className="col-md-8">
-                    {this.state.current_email ? <MailRenderer email={this.state.current_email} active_attachment={this.state.current_attachment} handler={this.state.handler} /> : null}
+                    {this.state.current_email ? <MailRenderer email={this.state.current_email} handler={this.state.handler} /> : null}
                 </div>
+                <AttachmentPopup current={this.state.current_attachment} />
             </div>
         </div>;
     }

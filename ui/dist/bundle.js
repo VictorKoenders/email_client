@@ -86,6 +86,106 @@
 /************************************************************************/
 /******/ ({
 
+/***/ "./src/components/AttachmentPopup.tsx":
+/*!********************************************!*\
+  !*** ./src/components/AttachmentPopup.tsx ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const React = __webpack_require__(/*! react */ "react");
+exports.MODAL_ID = "attachment_modal";
+class AttachmentPopup extends React.Component {
+    constructor(props, context) {
+        super(props, context);
+        this.state = {};
+    }
+    static is_renderable_mime_type(mime_type) {
+        return mime_type.startsWith("image/");
+    }
+    static is_text_mime_type(mime_type) {
+        return mime_type.startsWith("text/") || mime_type.startsWith("multipart/");
+    }
+    render() {
+        let attachment_name = "unknown";
+        let attachment_content = null;
+        if (this.props.current) {
+            if (this.props.current.name) {
+                attachment_name = this.props.current.name;
+            }
+            attachment_name += " (" + this.props.current.mime_type + ")";
+            if (AttachmentPopup.is_renderable_mime_type(this.props.current.mime_type)) {
+                var base64 = base64ArrayBuffer(this.props.current.contents);
+                attachment_content = React.createElement("img", { src: "data:" + this.props.current.mime_type + ";base64," + base64 });
+            }
+            if (AttachmentPopup.is_text_mime_type(this.props.current.mime_type)) {
+                attachment_content = React.createElement("pre", null, String.fromCharCode.apply(null, this.props.current.contents));
+            }
+        }
+        return React.createElement("div", { className: "modal fade bd-example-modal-lg", tabIndex: -1, role: "dialog", "aria-labelledby": "myLargeModalLabel", "aria-hidden": "true", id: exports.MODAL_ID },
+            React.createElement("div", { className: "modal-dialog modal-lg" },
+                React.createElement("div", { className: "modal-content" },
+                    React.createElement("div", { className: "modal-header" },
+                        React.createElement("h5", { className: "modal-title" }, this.props.current
+                            ? attachment_name
+                            : ""),
+                        React.createElement("button", { type: "button", className: "close", "data-dismiss": "modal", "aria-label": "Close" },
+                            React.createElement("span", { "aria-hidden": "true" }, "\u00D7"))),
+                    React.createElement("div", { className: "modal-body" }, attachment_content),
+                    React.createElement("div", { className: "modal-footer" },
+                        this.props.current
+                            ? React.createElement("a", { href: "attachment/" + this.props.current.id, className: "btn btn-default" }, "Download")
+                            : null,
+                        React.createElement("button", { type: "button", className: "btn btn-primary", "data-dismiss": "modal" }, "Close")))));
+    }
+}
+exports.AttachmentPopup = AttachmentPopup;
+function base64ArrayBuffer(arrayBuffer) {
+    var base64 = '';
+    var encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    var bytes = new Uint8Array(arrayBuffer);
+    var byteLength = bytes.byteLength;
+    var byteRemainder = byteLength % 3;
+    var mainLength = byteLength - byteRemainder;
+    var a, b, c, d;
+    var chunk;
+    // Main loop deals with bytes in chunks of 3
+    for (var i = 0; i < mainLength; i = i + 3) {
+        // Combine the three bytes into a single integer
+        chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+        // Use bitmasks to extract 6-bit segments from the triplet
+        a = (chunk & 16515072) >> 18; // 16515072 = (2^6 - 1) << 18
+        b = (chunk & 258048) >> 12; // 258048   = (2^6 - 1) << 12
+        c = (chunk & 4032) >> 6; // 4032     = (2^6 - 1) << 6
+        d = chunk & 63; // 63       = 2^6 - 1
+        // Convert the raw binary segments to the appropriate ASCII encoding
+        base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d];
+    }
+    // Deal with the remaining bytes and padding
+    if (byteRemainder == 1) {
+        chunk = bytes[mainLength];
+        a = (chunk & 252) >> 2; // 252 = (2^6 - 1) << 2
+        // Set the 4 least significant bits to zero
+        b = (chunk & 3) << 4; // 3   = 2^2 - 1
+        base64 += encodings[a] + encodings[b] + '==';
+    }
+    else if (byteRemainder == 2) {
+        chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1];
+        a = (chunk & 64512) >> 10; // 64512 = (2^6 - 1) << 10
+        b = (chunk & 1008) >> 4; // 1008  = (2^6 - 1) << 4
+        // Set the 2 least significant bits to zero
+        c = (chunk & 15) << 2; // 15    = 2^4 - 1
+        base64 += encodings[a] + encodings[b] + encodings[c] + '=';
+    }
+    return base64;
+}
+
+
+/***/ }),
+
 /***/ "./src/components/Login.tsx":
 /*!**********************************!*\
   !*** ./src/components/Login.tsx ***!
@@ -162,6 +262,7 @@ exports.Login = Login;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 const React = __webpack_require__(/*! react */ "react");
+const AttachmentPopup_1 = __webpack_require__(/*! ./AttachmentPopup */ "./src/components/AttachmentPopup.tsx");
 class MailRenderer extends React.Component {
     constructor(props, context) {
         super(props, context);
@@ -188,8 +289,8 @@ class MailRenderer extends React.Component {
         const attachments = [];
         for (const attachment of this.props.email.attachments) {
             const name = attachment.name || ("unknown " + attachment.mime_type);
-            if (this.is_renderable_mime_type(attachment.mime_type)) {
-                attachments.push(React.createElement("button", { type: "button", className: "btn btn-secondary", key: attachment.id, onClick: this.select_attachment.bind(this, attachment), "data-toggle": "modal", "data-target": "#attachment_popup" }, name));
+            if (AttachmentPopup_1.AttachmentPopup.is_renderable_mime_type(attachment.mime_type)) {
+                attachments.push(React.createElement("button", { type: "button", className: "btn btn-secondary", key: attachment.id, onClick: this.select_attachment.bind(this, attachment), "data-toggle": "modal", "data-target": "#" + AttachmentPopup_1.MODAL_ID }, name));
             }
             else {
                 attachments.push(React.createElement("button", { type: "button", className: "btn btn-secondary", key: attachment.id, onClick: this.download_attachment.bind(this, attachment) }, name));
@@ -197,45 +298,10 @@ class MailRenderer extends React.Component {
         }
         if (attachments.length > 0) {
             return React.createElement(React.Fragment, null,
-                React.createElement("div", { className: "btn-group", role: "group", "aria-label": "Attachments" }, attachments),
+                React.createElement("div", { className: "btn-group", style: { flexWrap: "wrap" }, role: "group", "aria-label": "Attachments" }, attachments),
                 React.createElement("br", null));
         }
         return null;
-    }
-    is_renderable_mime_type(mime_type) {
-        return mime_type.startsWith("image/");
-    }
-    render_attachment() {
-        return React.createElement("b", null, "Prview not implemented");
-    }
-    render_attachment_modal() {
-        let attachment_name = "unknown";
-        let attachment_content = null;
-        if (this.props.active_attachment) {
-            if (this.props.active_attachment.name) {
-                attachment_name = this.props.active_attachment.name;
-            }
-            attachment_name += " (" + this.props.active_attachment.mime_type + ")";
-            if (this.is_renderable_mime_type(this.props.active_attachment.mime_type)) {
-                var base64 = base64ArrayBuffer(this.props.active_attachment.contents);
-                attachment_content = React.createElement("img", { src: "data:" + this.props.active_attachment.mime_type + ";base64," + base64 });
-            }
-        }
-        return React.createElement("div", { className: "modal fade bd-example-modal-lg", tabIndex: -1, role: "dialog", "aria-labelledby": "myLargeModalLabel", "aria-hidden": "true", id: "attachment_popup" },
-            React.createElement("div", { className: "modal-dialog modal-lg" },
-                React.createElement("div", { className: "modal-content" },
-                    React.createElement("div", { className: "modal-header" },
-                        React.createElement("h5", { className: "modal-title" }, this.props.active_attachment
-                            ? attachment_name
-                            : ""),
-                        React.createElement("button", { type: "button", className: "close", "data-dismiss": "modal", "aria-label": "Close" },
-                            React.createElement("span", { "aria-hidden": "true" }, "\u00D7"))),
-                    React.createElement("div", { className: "modal-body" }, attachment_content),
-                    React.createElement("div", { className: "modal-footer" },
-                        this.props.active_attachment
-                            ? React.createElement("a", { href: "attachment/" + this.props.active_attachment.id, className: "btn btn-default" }, "Download")
-                            : null,
-                        React.createElement("button", { type: "button", className: "btn btn-primary", "data-dismiss": "modal" }, "Close")))));
     }
     render_text_html_tabs() {
         return React.createElement("ul", { className: "nav nav-tabs" },
@@ -263,51 +329,11 @@ class MailRenderer extends React.Component {
             React.createElement("br", null),
             React.createElement("br", null),
             this.render_attachments(),
-            this.render_attachment_modal(),
             this.props.email.html_body ? this.render_text_html_tabs() : null,
             this.render_body());
     }
 }
 exports.MailRenderer = MailRenderer;
-function base64ArrayBuffer(arrayBuffer) {
-    var base64 = '';
-    var encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-    var bytes = new Uint8Array(arrayBuffer);
-    var byteLength = bytes.byteLength;
-    var byteRemainder = byteLength % 3;
-    var mainLength = byteLength - byteRemainder;
-    var a, b, c, d;
-    var chunk;
-    // Main loop deals with bytes in chunks of 3
-    for (var i = 0; i < mainLength; i = i + 3) {
-        // Combine the three bytes into a single integer
-        chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
-        // Use bitmasks to extract 6-bit segments from the triplet
-        a = (chunk & 16515072) >> 18; // 16515072 = (2^6 - 1) << 18
-        b = (chunk & 258048) >> 12; // 258048   = (2^6 - 1) << 12
-        c = (chunk & 4032) >> 6; // 4032     = (2^6 - 1) << 6
-        d = chunk & 63; // 63       = 2^6 - 1
-        // Convert the raw binary segments to the appropriate ASCII encoding
-        base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d];
-    }
-    // Deal with the remaining bytes and padding
-    if (byteRemainder == 1) {
-        chunk = bytes[mainLength];
-        a = (chunk & 252) >> 2; // 252 = (2^6 - 1) << 2
-        // Set the 4 least significant bits to zero
-        b = (chunk & 3) << 4; // 3   = 2^2 - 1
-        base64 += encodings[a] + encodings[b] + '==';
-    }
-    else if (byteRemainder == 2) {
-        chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1];
-        a = (chunk & 64512) >> 10; // 64512 = (2^6 - 1) << 10
-        b = (chunk & 1008) >> 4; // 1008  = (2^6 - 1) << 4
-        // Set the 2 least significant bits to zero
-        c = (chunk & 15) << 2; // 15    = 2^4 - 1
-        base64 += encodings[a] + encodings[b] + encodings[c] + '=';
-    }
-    return base64;
-}
 
 
 /***/ }),
@@ -398,6 +424,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const React = __webpack_require__(/*! react */ "react");
 const Menu_1 = __webpack_require__(/*! ./Menu */ "./src/components/Menu.tsx");
 const MailRenderer_1 = __webpack_require__(/*! ./MailRenderer */ "./src/components/MailRenderer.tsx");
+const AttachmentPopup_1 = __webpack_require__(/*! ./AttachmentPopup */ "./src/components/AttachmentPopup.tsx");
 const websocket_1 = __webpack_require__(/*! ../websocket */ "./src/websocket.ts");
 const Login_1 = __webpack_require__(/*! ./Login */ "./src/components/Login.tsx");
 class Root extends React.Component {
@@ -497,7 +524,8 @@ class Root extends React.Component {
             React.createElement("div", { className: "row" },
                 React.createElement("div", { className: "col-md-4" },
                     React.createElement(Menu_1.Menu, { inboxes: this.state.inboxes, emails: this.state.emails, onInboxSelected: this.select_inbox.bind(this), onEmailSelected: this.select_email.bind(this), active_inbox: this.state.current_inbox, active_email: this.state.current_email })),
-                React.createElement("div", { className: "col-md-8" }, this.state.current_email ? React.createElement(MailRenderer_1.MailRenderer, { email: this.state.current_email, active_attachment: this.state.current_attachment, handler: this.state.handler }) : null)));
+                React.createElement("div", { className: "col-md-8" }, this.state.current_email ? React.createElement(MailRenderer_1.MailRenderer, { email: this.state.current_email, handler: this.state.handler }) : null),
+                React.createElement(AttachmentPopup_1.AttachmentPopup, { current: this.state.current_attachment })));
     }
 }
 exports.Root = Root;
