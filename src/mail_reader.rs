@@ -1,10 +1,8 @@
 use actix::{Actor, ArbiterService, AsyncContext, Context, Handler, Recipient, Supervised};
 use failure::ResultExt;
 use message::Message;
-use native_tls::{Pkcs12, TlsConnector};
+use native_tls::TlsConnector;
 use std::env;
-use std::fs::File;
-use std::io::Read;
 use std::str;
 use std::time::Duration;
 use Result;
@@ -17,14 +15,13 @@ pub enum ImapMessage {
 }
 
 pub struct EmailParser {
-    imap_domain: String,
-    imap_port: u16,
-    imap_host: String,
-    imap_pfx_file: String,
-    imap_pfx_file_password: String,
-    imap_username: String,
-    imap_password: String,
-
+    // imap_domain: String,
+    // imap_port: u16,
+    // imap_host: String,
+    // imap_pfx_file: String,
+    // imap_pfx_file_password: String,
+    // imap_username: String,
+    // imap_password: String,
     message_recipients: Vec<Recipient<ImapMessage>>,
     pub client: Client,
 }
@@ -37,25 +34,12 @@ impl Default for EmailParser {
             .parse()
             .expect("IMAP_PORT is not a valid unsigned int");
         let imap_host = env::var("IMAP_HOST").expect("Missing env var IMAP_HOST");
-        let imap_pfx_file = env::var("IMAP_PFX_FILE").expect("Missing env var IMAP_PFX_FILE");
-        let imap_pfx_file_password =
-            env::var("IMAP_PFX_FILE_PASSWORD").expect("Missing env var IMAP_PFX_FILE_PASSWORD");
         let imap_username = env::var("IMAP_USERNAME").expect("Missing env var IMAP_USERNAME");
         let imap_password = env::var("IMAP_PASSWORD").expect("Missing env var IMAP_PASSWORD");
         let socket_addr = format!("{}:{}", imap_host, imap_port);
 
-        let mut file = File::open(&imap_pfx_file)
-            .unwrap_or_else(|e| panic!("Could not open file {:?}: {}", imap_pfx_file, e));
-        let mut identity = vec![];
-        file.read_to_end(&mut identity)
-            .expect("Could not read pfx file");
-        let identity = Pkcs12::from_der(&identity, &imap_pfx_file_password)
-            .expect("Could not parse pfx file as PKCS12");
-        let mut ssl_connector = TlsConnector::builder().expect("Could not create TLS builder");
-        ssl_connector
-            .identity(identity)
-            .expect("Could not load TLS identity");
-        let ssl_connector = ssl_connector
+        let ssl_connector = TlsConnector::builder()
+            .expect("Could not create TLS builder")
             .build()
             .expect("Could not instantiate TLS connection");
         let mut client = Client::secure_connect(socket_addr, &imap_domain, &ssl_connector)
@@ -65,13 +49,6 @@ impl Default for EmailParser {
         client.select("INBOX").unwrap();
 
         EmailParser {
-            imap_domain,
-            imap_port,
-            imap_host,
-            imap_pfx_file,
-            imap_pfx_file_password,
-            imap_username,
-            imap_password,
             message_recipients: Vec::new(),
             client,
         }
@@ -85,6 +62,8 @@ impl Actor for EmailParser {
 impl Supervised for EmailParser {
     fn restarting(&mut self, _ctx: &mut Self::Context) {
         println!("[EmailParser] Restarting");
+        *self = EmailParser::default();
+        /*
         let socket_addr = format!("{}:{}", self.imap_host, self.imap_port);
         let mut file = File::open(&self.imap_pfx_file)
             .unwrap_or_else(|e| panic!("Could not open file {:?}: {}", self.imap_pfx_file, e));
@@ -106,6 +85,7 @@ impl Supervised for EmailParser {
             .login(&self.imap_username, &self.imap_password)
             .unwrap();
         self.client = client;
+        */
     }
 }
 
