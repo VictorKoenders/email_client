@@ -520,11 +520,11 @@ class Root extends React.Component {
         if (!this.state.authenticated) {
             return React.createElement(Login_1.Login, { onAuthenticate: this.authenticate.bind(this), failed_login: this.state.failed_login, clear_failed_login: this.clear_failed_login.bind(this) });
         }
-        return React.createElement("div", { className: "container" },
+        return React.createElement("div", { className: "container-fluid" },
             React.createElement("div", { className: "row" },
-                React.createElement("div", { className: "col-md-4" },
+                React.createElement("div", { className: "col-md-4", style: { overflowY: "auto", height: "100vh" } },
                     React.createElement(Menu_1.Menu, { inboxes: this.state.inboxes, emails: this.state.emails, onInboxSelected: this.select_inbox.bind(this), onEmailSelected: this.select_email.bind(this), active_inbox: this.state.current_inbox, active_email: this.state.current_email })),
-                React.createElement("div", { className: "col-md-8" }, this.state.current_email ? React.createElement(MailRenderer_1.MailRenderer, { email: this.state.current_email, handler: this.state.handler }) : null),
+                React.createElement("div", { className: "col-md-8", style: { overflowY: "auto", height: "100vh" } }, this.state.current_email ? React.createElement(MailRenderer_1.MailRenderer, { email: this.state.current_email, handler: this.state.handler }) : null),
                 React.createElement(AttachmentPopup_1.AttachmentPopup, { current: this.state.current_attachment })));
     }
 }

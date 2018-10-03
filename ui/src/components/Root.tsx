@@ -126,9 +126,9 @@ export class Root extends React.Component<Props, State> {
                 clear_failed_login={this.clear_failed_login.bind(this)}
             />;
         }
-        return <div className="container">
+        return <div className="container-fluid">
             <div className="row">
-                <div className="col-md-4">
+                <div className="col-md-4" style={{ overflowY: "auto", height: "100vh" }}>
                     <Menu inboxes={this.state.inboxes}
                         emails={this.state.emails}
                         onInboxSelected={this.select_inbox.bind(this)}
@@ -137,7 +137,7 @@ export class Root extends React.Component<Props, State> {
                         active_email={this.state.current_email}
                     />
                 </div>
-                <div className="col-md-8">
+                <div className="col-md-8" style={{ overflowY: "auto", height: "100vh" }}>
                     {this.state.current_email ? <MailRenderer email={this.state.current_email} handler={this.state.handler} /> : null}
                 </div>
                 <AttachmentPopup current={this.state.current_attachment} />
