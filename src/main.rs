@@ -9,6 +9,8 @@ extern crate native_tls;
 extern crate failure;
 extern crate futures;
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate serde_derive;
 extern crate chrono;
 extern crate r2d2;
@@ -42,7 +44,8 @@ fn main() {
             Arg::with_name("reset")
                 .long("reset")
                 .help("Resets all emails and the database, then exits"),
-        ).get_matches();
+        )
+        .get_matches();
 
     if matches.is_present("reset") {
         data::Database::clear();

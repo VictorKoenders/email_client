@@ -10,6 +10,7 @@ use actix_web::ws;
 use data::NewEmail;
 use serde::Serialize;
 use serde_json::{self, Value};
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use web::State as ServerState;
@@ -80,35 +81,41 @@ impl ContextSender for <Client as Actor>::Context {
     }
 }
 
+lazy_static! {
+    static ref CLIENT_LISTENERS: HashMap<&'static str, Box<ClientMessage + Sync + 'static>> = {
+        let mut map: HashMap<&'static str, Box<ClientMessage + Sync + 'static>> = HashMap::new();
+        map.insert("load_inbox", Box::new(LoadInboxMessage));
+        map.insert("authenticate", Box::new(AuthenticationMessage));
+        map.insert("load_email", Box::new(LoadEmailMessage));
+        map.insert("load_attachment", Box::new(LoadAttachmentMessage));
+        map
+    };
+}
+
 impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
     fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
         match msg {
             ws::Message::Ping(msg) => ctx.pong(&msg),
             ws::Message::Text(text) => {
-                let data: Value = match serde_json::from_str(&text) {
-                    Ok(d) => d,
+                let data = match serde_json::from_str(&text) {
+                    Ok(Value::Object(m)) => m,
+                    Ok(o) => {
+                        println!("Expected object, got {:?}", o);
+                        return;
+                    }
                     Err(e) => {
                         println!("Could not parse json from client. {:?}", e);
                         return;
                     }
                 };
-                if let Value::Object(d) = &data["load_inbox"] {
-                    LoadInboxMessage.handle(self, ctx, d);
-                    return;
+
+                if let Some((key, Value::Object(value))) = data.iter().next() {
+                    if let Some(handler) = CLIENT_LISTENERS.get(&key.as_str()) {
+                        handler.handle(self, ctx, value);
+                        return;
+                    }
                 }
-                if let Value::Object(d) = &data["authenticate"] {
-                    AuthenticationMessage.handle(self, ctx, d);
-                    return;
-                }
-                if let Value::Object(d) = &data["load_email"] {
-                    LoadEmailMessage.handle(self, ctx, d);
-                    return;
-                }
-                if let Value::Object(d) = &data["load_attachment"] {
-                    LoadAttachmentMessage.handle(self, ctx, d);
-                    return;
-                }
-                println!("Unknown json from websocket client {:?}", text);
+                println!("Could not handle message from client: {:?}", data);
             }
             ws::Message::Binary(_bin) => {
                 println!("Unknown binary blob from client, ignoring");
