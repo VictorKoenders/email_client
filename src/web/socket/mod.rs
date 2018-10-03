@@ -1,9 +1,8 @@
 pub mod client;
-pub mod messages;
+pub mod message;
 pub mod server;
 
 pub use self::client::Client;
-pub use self::messages::{Connect, Disconnect};
 pub use self::server::Server;
 
 use super::State;

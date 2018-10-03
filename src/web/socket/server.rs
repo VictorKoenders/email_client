@@ -1,4 +1,5 @@
-use super::{Client, Connect, Disconnect};
+use super::message::{Connect, Disconnect};
+use super::Client;
 use actix::{Actor, Addr, ArbiterService, Context, Handler, Supervised};
 use data::NewEmail;
 use std::collections::HashMap;
