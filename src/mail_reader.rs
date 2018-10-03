@@ -15,13 +15,6 @@ pub enum ImapMessage {
 }
 
 pub struct EmailParser {
-    // imap_domain: String,
-    // imap_port: u16,
-    // imap_host: String,
-    // imap_pfx_file: String,
-    // imap_pfx_file_password: String,
-    // imap_username: String,
-    // imap_password: String,
     message_recipients: Vec<Recipient<ImapMessage>>,
     pub client: Client,
 }
@@ -38,6 +31,10 @@ impl Default for EmailParser {
         let imap_password = env::var("IMAP_PASSWORD").expect("Missing env var IMAP_PASSWORD");
         let socket_addr = format!("{}:{}", imap_host, imap_port);
 
+        println!(
+            "Connecting to {:?} (domain: {:?})",
+            socket_addr, imap_domain
+        );
         let ssl_connector = TlsConnector::builder()
             .expect("Could not create TLS builder")
             .build()
@@ -63,29 +60,6 @@ impl Supervised for EmailParser {
     fn restarting(&mut self, _ctx: &mut Self::Context) {
         println!("[EmailParser] Restarting");
         *self = EmailParser::default();
-        /*
-        let socket_addr = format!("{}:{}", self.imap_host, self.imap_port);
-        let mut file = File::open(&self.imap_pfx_file)
-            .unwrap_or_else(|e| panic!("Could not open file {:?}: {}", self.imap_pfx_file, e));
-        let mut identity = vec![];
-        file.read_to_end(&mut identity)
-            .expect("Could not read pfx file");
-        let identity = Pkcs12::from_der(&identity, &self.imap_pfx_file_password)
-            .expect("Could not parse pfx file as PKCS12");
-        let mut ssl_connector = TlsConnector::builder().expect("Could not create TLS builder");
-        ssl_connector
-            .identity(identity)
-            .expect("Could not load TLS identity");
-        let ssl_connector = ssl_connector
-            .build()
-            .expect("Could not instantiate TLS connection");
-        let mut client = Client::secure_connect(socket_addr, &self.imap_domain, &ssl_connector)
-            .expect("Could not create a secure client");
-        client
-            .login(&self.imap_username, &self.imap_password)
-            .unwrap();
-        self.client = client;
-        */
     }
 }
 
