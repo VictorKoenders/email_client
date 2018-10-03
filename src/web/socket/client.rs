@@ -8,6 +8,7 @@ use data::models::email::{Email, EmailInfo};
 use data::models::email_attachment::{Attachment, AttachmentInfo};
 use data::models::inbox::InboxWithAddress;
 use data::{ListAddresses, LoadAttachment, LoadEmail, LoadInbox, LoadInboxResponse, NewEmail};
+use serde::Serialize;
 use serde_json::{self, Value};
 use std::env;
 use std::net::SocketAddr;
@@ -72,167 +73,13 @@ impl Actor for Client {
     }
 }
 
-impl Client {
-    fn send_email_info(
-        &self,
-        context: &mut ws::WebsocketContext<Self, ServerState>,
-        email_received: EmailInfo,
-    ) {
-        assert!(self.authenticated);
-        context.text(serde_json::to_string(&EmailReceived { email_received }).unwrap());
-    }
-    fn send_email_loaded(
-        &self,
-        context: &mut ws::WebsocketContext<Self, ServerState>,
-        email_loaded: Email,
-    ) {
-        assert!(self.authenticated);
-        context.text(serde_json::to_string(&EmailLoaded { email_loaded }).unwrap());
-    }
-    fn send_inbox_loaded(
-        &self,
-        context: &mut ws::WebsocketContext<Self, ServerState>,
-        inbox_loaded: LoadInboxResponse,
-    ) {
-        assert!(self.authenticated);
-        context.text(serde_json::to_string(&InboxLoaded { inbox_loaded }).unwrap());
-    }
-    fn send_init(
-        &self,
-        context: &mut ws::WebsocketContext<Self, ServerState>,
-        init: Vec<InboxWithAddress>,
-    ) {
-        assert!(self.authenticated);
-        context.text(serde_json::to_string(&Init { init }).unwrap());
-    }
-    fn send_attachment(
-        &self,
-        context: &mut ws::WebsocketContext<Self, ServerState>,
-        attachment_loaded: Attachment,
-    ) {
-        assert!(self.authenticated);
-        context.text(serde_json::to_string(&AttachmentLoaded { attachment_loaded }).unwrap());
-    }
+trait ContextSender {
+    fn send(&mut self, msg: &impl Serialize);
 }
 
-impl Client {
-    fn handle_load_email(&self, d: &Map, ctx: &mut <Self as Actor>::Context) {
-        if !self.authenticated {
-            ctx.text(String::from("{{\"error\":\"Not authenticated\"}}"));
-            return;
-        }
-        let email_info: EmailInfo = match serde_json::from_value(Value::Object(d.clone())) {
-            Ok(info) => info,
-            Err(e) => {
-                println!("Could not parse json from client. {:?}", e);
-                return;
-            }
-        };
-        ctx.state()
-            .database
-            .send(LoadEmail(email_info))
-            .into_actor(self)
-            .then(|res, act, ctx| {
-                match res {
-                    Ok(Ok(res)) => {
-                        act.send_email_loaded(ctx, res.email);
-                    }
-                    _ => ctx.stop(),
-                }
-                fut::ok(())
-            })
-            .wait(ctx);
-    }
-
-    fn handle_load_attachment(&self, d: &Map, ctx: &mut <Self as Actor>::Context) {
-        if !self.authenticated {
-            ctx.text(String::from("{{\"error\":\"Not authenticated\"}}"));
-            return;
-        }
-        let attachment_info: AttachmentInfo = match serde_json::from_value(Value::Object(d.clone()))
-        {
-            Ok(info) => info,
-            Err(e) => {
-                println!("Could not parse json from client. {:?}", e);
-                return;
-            }
-        };
-        ctx.state()
-            .database
-            .send(LoadAttachment(attachment_info))
-            .into_actor(self)
-            .then(|res, act, ctx| {
-                match res {
-                    Ok(Ok(res)) => {
-                        act.send_attachment(ctx, res.attachment);
-                    }
-                    _ => ctx.stop(),
-                }
-                fut::ok(())
-            })
-            .wait(ctx);
-    }
-
-    fn handle_load_inbox(&self, d: &Map, ctx: &mut <Self as Actor>::Context) {
-        if !self.authenticated {
-            ctx.text(String::from("{{\"error\":\"Not authenticated\"}}"));
-            return;
-        }
-        let address: InboxWithAddress = match serde_json::from_value(Value::Object(d.clone())) {
-            Ok(a) => a,
-            Err(e) => {
-                println!("Could not parse json from client. {:?}", e);
-                return;
-            }
-        };
-        ctx.state()
-            .database
-            .send(LoadInbox(address))
-            .into_actor(self)
-            .then(|res, act, ctx| {
-                match res {
-                    Ok(Ok(res)) => {
-                        act.send_inbox_loaded(ctx, res);
-                    }
-                    _ => ctx.stop(),
-                }
-                fut::ok(())
-            })
-            .wait(ctx);
-    }
-
-    fn handle_authenticate(&mut self, d: &Map, ctx: &mut <Self as Actor>::Context) {
-        let (username, password) = match (&d["username"], &d["password"]) {
-            (Value::String(u), Value::String(p)) => (u, p),
-            _ => {
-                ctx.text(String::from("{{\"authenticate_result\":\"false\"}}"));
-                return;
-            }
-        };
-        let env_username =
-            env::var("CLIENT_USERNAME").expect("Global variable CLIENT_USERNAME not set");
-        let env_password =
-            env::var("CLIENT_PASSWORD").expect("Global variable CLIENT_PASSWORD not set");
-        self.authenticated = &env_username == username && &env_password == password;
-        ctx.text(format!(
-            "{{\"authenticate_result\":{}}}",
-            self.authenticated
-        ));
-
-        if self.authenticated {
-            ctx.state()
-                .database
-                .send(ListAddresses)
-                .into_actor(self)
-                .then(|res, act, ctx| {
-                    match res {
-                        Ok(Ok(res)) => act.send_init(ctx, res.0),
-                        _ => ctx.stop(),
-                    }
-                    fut::ok(())
-                })
-                .wait(ctx);
-        }
+impl ContextSender for <Client as Actor>::Context {
+    fn send(&mut self, obj: &impl Serialize) {
+        self.text(serde_json::to_string(obj).unwrap());
     }
 }
 
@@ -274,19 +121,19 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                     }
                 };
                 if let Value::Object(d) = &data["load_inbox"] {
-                    self.handle_load_inbox(d, ctx);
+                    LoadInboxMessage.handle(self, ctx, d);
                     return;
                 }
                 if let Value::Object(d) = &data["authenticate"] {
-                    self.handle_authenticate(d, ctx);
+                    AuthenticationMessage.handle(self, ctx, d);
                     return;
                 }
                 if let Value::Object(d) = &data["load_email"] {
-                    self.handle_load_email(d, ctx);
+                    LoadEmailMessage.handle(self, ctx, d);
                     return;
                 }
                 if let Value::Object(d) = &data["load_attachment"] {
-                    self.handle_load_attachment(d, ctx);
+                    LoadAttachmentMessage.handle(self, ctx, d);
                     return;
                 }
                 println!("Unknown json from websocket client {:?}", text);
@@ -306,7 +153,173 @@ impl Handler<NewEmail> for Client {
     type Result = ();
     fn handle(&mut self, msg: NewEmail, context: &mut Self::Context) {
         if self.authenticated {
-            self.send_email_info(context, msg.0);
+            context.text(
+                serde_json::to_string(&EmailReceived {
+                    email_received: msg.0,
+                })
+                .unwrap(),
+            );
         }
+    }
+}
+
+trait ClientMessage {
+    fn handle(&self, client: &mut Client, context: &mut <Client as Actor>::Context, value: &Map);
+}
+
+#[derive(Serialize)]
+struct Error<'a> {
+    error: &'a str,
+}
+
+struct LoadInboxMessage;
+
+impl ClientMessage for LoadInboxMessage {
+    fn handle(&self, client: &mut Client, ctx: &mut <Client as Actor>::Context, value: &Map) {
+        if !client.authenticated {
+            ctx.send(&Error {
+                error: "Not authenticated",
+            });
+            return;
+        }
+        let address: InboxWithAddress = match serde_json::from_value(Value::Object(value.clone())) {
+            Ok(a) => a,
+            Err(e) => {
+                println!("Could not parse json from client. {:?}", e);
+                return;
+            }
+        };
+        ctx.state()
+            .database
+            .send(LoadInbox(address))
+            .into_actor(client)
+            .then(|res, _, ctx| {
+                match res {
+                    Ok(Ok(res)) => {
+                        ctx.send(&InboxLoaded { inbox_loaded: res });
+                    }
+                    _ => ctx.stop(),
+                }
+                fut::ok(())
+            })
+            .wait(ctx);
+    }
+}
+
+struct AuthenticationMessage;
+
+#[derive(Serialize)]
+struct AuthenticateResult {
+    authenticate_result: bool,
+}
+
+impl ClientMessage for AuthenticationMessage {
+    fn handle(&self, client: &mut Client, ctx: &mut <Client as Actor>::Context, value: &Map) {
+        let (username, password) = match (&value["username"], &value["password"]) {
+            (Value::String(u), Value::String(p)) => (u, p),
+            _ => {
+                ctx.send(&AuthenticateResult {
+                    authenticate_result: false,
+                });
+                return;
+            }
+        };
+        let env_username =
+            env::var("CLIENT_USERNAME").expect("Global variable CLIENT_USERNAME not set");
+        let env_password =
+            env::var("CLIENT_PASSWORD").expect("Global variable CLIENT_PASSWORD not set");
+        client.authenticated = &env_username == username && &env_password == password;
+        ctx.send(&AuthenticateResult {
+            authenticate_result: client.authenticated,
+        });
+
+        if client.authenticated {
+            ctx.state()
+                .database
+                .send(ListAddresses)
+                .into_actor(client)
+                .then(|res, _, ctx| {
+                    match res {
+                        Ok(Ok(res)) => {
+                            ctx.send(&Init { init: res.0 });
+                        }
+                        _ => ctx.stop(),
+                    }
+                    fut::ok(())
+                })
+                .wait(ctx);
+        }
+    }
+}
+
+struct LoadEmailMessage;
+
+impl ClientMessage for LoadEmailMessage {
+    fn handle(&self, client: &mut Client, ctx: &mut <Client as Actor>::Context, value: &Map) {
+        if !client.authenticated {
+            ctx.send(&Error {
+                error: "Not authenticated",
+            });
+            return;
+        }
+        let email_info: EmailInfo = match serde_json::from_value(Value::Object(value.clone())) {
+            Ok(info) => info,
+            Err(e) => {
+                println!("Could not parse json from client. {:?}", e);
+                return;
+            }
+        };
+        ctx.state()
+            .database
+            .send(LoadEmail(email_info))
+            .into_actor(client)
+            .then(|res, _, ctx| {
+                match res {
+                    Ok(Ok(res)) => {
+                        ctx.send(&EmailLoaded {
+                            email_loaded: res.email,
+                        });
+                    }
+                    _ => ctx.stop(),
+                }
+                fut::ok(())
+            })
+            .wait(ctx);
+    }
+}
+
+struct LoadAttachmentMessage;
+impl ClientMessage for LoadAttachmentMessage {
+    fn handle(&self, client: &mut Client, ctx: &mut <Client as Actor>::Context, value: &Map) {
+        if !client.authenticated {
+            ctx.send(&Error {
+                error: "Not authenticated",
+            });
+            return;
+        }
+        let attachment_info: AttachmentInfo =
+            match serde_json::from_value(Value::Object(value.clone())) {
+                Ok(info) => info,
+                Err(e) => {
+                    println!("Could not parse json from client. {:?}", e);
+                    return;
+                }
+            };
+        ctx.state()
+            .database
+            .send(LoadAttachment(attachment_info))
+            .into_actor(client)
+            .then(|res, _, ctx| {
+                match res {
+                    Ok(Ok(res)) => {
+                        ctx.send(&AttachmentLoaded {
+                            attachment_loaded: res.attachment,
+                        });
+                    }
+                    _ => ctx.stop(),
+                }
+                fut::ok(())
+            })
+            .wait(ctx);
     }
 }
