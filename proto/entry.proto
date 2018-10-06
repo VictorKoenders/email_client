@@ -1,0 +1,16 @@
+syntax = "proto3";
+package email_client;
+
+import "authenticate.proto";
+import "email.proto";
+import "inbox.proto";
+
+message Network {
+    oneof message {
+        Init init = 1;
+    }
+};
+
+message Init {
+    repeated Inbox inbox = 1;
+}

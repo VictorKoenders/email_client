@@ -4,3 +4,5 @@
 *.pfx
 node_modules
 
+src/proto/*
+!src/proto/mod.rs

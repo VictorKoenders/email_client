@@ -1,0 +1,9 @@
+syntax = "proto3";
+package email_client;
+
+message Inbox {
+    string id = 1;
+    string name = 2;
+    repeated string address = 3;
+    int32 unread_count = 4;
+}

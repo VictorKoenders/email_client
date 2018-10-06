@@ -1,0 +1,12 @@
+syntax = "proto3";
+package email_client;
+
+message AuthenticateRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message AuthenticateResponse {
+    bool success = 1;
+}
+

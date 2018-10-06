@@ -1,0 +1,7 @@
+syntax = "proto3";
+package email_client;
+
+message EmailInfo {
+    string from = 1;
+    string to = 2;
+}
