@@ -1,3 +1,4 @@
+pub mod attachment;
 pub mod authenticate;
 pub mod email;
 mod entry;

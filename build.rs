@@ -6,6 +6,7 @@ fn main() {
     protoc_rust::run(protoc_rust::Args {
         out_dir: "src/proto",
         input: &[
+            "proto/attachment.proto",
             "proto/authenticate.proto",
             "proto/email.proto",
             "proto/entry.proto",

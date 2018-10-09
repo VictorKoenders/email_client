@@ -1,16 +1,30 @@
 syntax = "proto3";
 package email_client;
 
+import "attachment.proto";
 import "authenticate.proto";
 import "email.proto";
 import "inbox.proto";
 
-message Network {
+message ClientToServer {
     oneof message {
-        Init init = 1;
+        LoadInboxRequest load_inbox = 1;
+        AuthenticateRequest authenticate = 2;
+        LoadEmailRequest load_email = 3;
+        LoadAttachmentRequest load_attachment = 4;
     }
 };
 
-message Init {
-    repeated Inbox inbox = 1;
+message ServerToClient {
+    oneof message {
+        Error error = 1;
+        AuthenticateRequest authenticate = 2;
+        LoadInboxResponse inbox = 3;
+        LoadEmailResponse email = 4;
+        LoadAttachmentResponse attachment = 5;
+    }
+};
+
+message Error {
+    string error = 1;
 }

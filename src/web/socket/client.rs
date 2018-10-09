@@ -9,7 +9,7 @@ use actix::{
 use actix_web::ws;
 use data::NewEmail;
 use serde::Serialize;
-use serde_json::{self, Value};
+use serde_json;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -72,6 +72,7 @@ impl Actor for Client {
 }
 
 pub trait ContextSender {
+    #[deprecated(note = "Switch to protobuf")]
     fn send(&mut self, msg: &impl Serialize);
 }
 
@@ -97,6 +98,9 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
         match msg {
             ws::Message::Ping(msg) => ctx.pong(&msg),
             ws::Message::Text(text) => {
+                println!("Got TEXT from client, ignoring");
+                println!("{}", text);
+                /*
                 let data = match serde_json::from_str(&text) {
                     Ok(Value::Object(m)) => m,
                     Ok(o) => {
@@ -108,7 +112,7 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                         return;
                     }
                 };
-
+                
                 if let Some((key, Value::Object(value))) = data.iter().next() {
                     if let Some(handler) = CLIENT_LISTENERS.get(&key.as_str()) {
                         handler.handle(self, ctx, value);
@@ -116,9 +120,42 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                     }
                 }
                 println!("Could not handle message from client: {:?}", data);
+                */
             }
-            ws::Message::Binary(_bin) => {
-                println!("Unknown binary blob from client, ignoring");
+            ws::Message::Binary(mut bin) => {
+                println!("Received {:?} bytes", bin.len());
+                let mut reader = ::std::io::Cursor::new(bin.take());
+                let mut input = ::protobuf::CodedInputStream::new(&mut reader);
+                use protobuf::Message;
+                let mut result = ::proto::ClientToServer::new();
+                match result.merge_from(&mut input) {
+                    Ok(()) => {
+                        let message = match result.message {
+                            Some(m) => m,
+                            None => {
+                                println!("Client did not send a valid message");
+                                return;
+                            }
+                        };
+                        match message {
+                            ::proto::ClientToServer_oneof_message::authenticate(auth) => {
+                                println!("Got authenticate: {:?}", auth);
+                            }
+                            ::proto::ClientToServer_oneof_message::load_inbox(load_inbox) => {
+                                println!("Got load_inbox: {:?}", load_inbox);
+                            }
+                            ::proto::ClientToServer_oneof_message::load_email(load_email) => {
+                                println!("Got load_email: {:?}", load_email);
+                            }
+                            ::proto::ClientToServer_oneof_message::load_attachment(
+                                load_attachment,
+                            ) => {
+                                println!("Got load_attachment: {:?}", load_attachment);
+                            }
+                        }
+                    }
+                    Err(e) => println!("Could not receive binary blob from client: {:?}", e),
+                }
             }
             ws::Message::Pong(_msg) => {}
             ws::Message::Close(_msg) => {

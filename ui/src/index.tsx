@@ -14,7 +14,7 @@ declare global {
     }
 }
 
-window.replace_url_by_image = function(element: HTMLAnchorElement) {
+window.replace_url_by_image = function (element: HTMLAnchorElement) {
     const parent = element.parentElement!;
     const new_node = document.createElement("img");
     new_node.src = element.href;

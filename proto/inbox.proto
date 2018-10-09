@@ -1,9 +1,16 @@
 syntax = "proto3";
 package email_client;
 
-message Inbox {
+import "email.proto";
+
+message LoadInboxRequest {
+    string id = 1;
+}
+
+message LoadInboxResponse {
     string id = 1;
     string name = 2;
-    repeated string address = 3;
+    repeated string addresses = 3;
     int32 unread_count = 4;
+    repeated EmailHeader emails = 5;
 }
