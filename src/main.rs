@@ -1,3 +1,5 @@
+#![allow(proc_macro_derive_resolution_fallback)]
+
 #[macro_use]
 extern crate actix;
 extern crate actix_web;
@@ -9,7 +11,6 @@ extern crate protobuf;
 #[macro_use]
 extern crate failure;
 extern crate futures;
-#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate serde_derive;

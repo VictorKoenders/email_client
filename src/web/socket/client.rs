@@ -1,7 +1,4 @@
-use super::message::{
-    AuthenticationMessage, ClientMessage, Connect, Disconnect, EmailReceived,
-    LoadAttachmentMessage, LoadEmailMessage, LoadInboxMessage,
-};
+use super::message::{MessageHandler as _MessageHandler, Handler as MessageHandler, Connect, Disconnect, EmailReceived};
 use actix::{
     fut, Actor, ActorContext, ActorFuture, AsyncContext, ContextFutureSpawner, Handler, Running,
     StreamHandler, WrapFuture,
@@ -10,7 +7,6 @@ use actix_web::ws;
 use data::NewEmail;
 use serde::Serialize;
 use serde_json;
-use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use web::State as ServerState;
@@ -82,17 +78,6 @@ impl ContextSender for <Client as Actor>::Context {
     }
 }
 
-lazy_static! {
-    static ref CLIENT_LISTENERS: HashMap<&'static str, Box<ClientMessage + Sync + 'static>> = {
-        let mut map: HashMap<&'static str, Box<ClientMessage + Sync + 'static>> = HashMap::new();
-        map.insert("load_inbox", Box::new(LoadInboxMessage));
-        map.insert("authenticate", Box::new(AuthenticationMessage));
-        map.insert("load_email", Box::new(LoadEmailMessage));
-        map.insert("load_attachment", Box::new(LoadAttachmentMessage));
-        map
-    };
-}
-
 impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
     fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
         match msg {
@@ -100,27 +85,6 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
             ws::Message::Text(text) => {
                 println!("Got TEXT from client, ignoring");
                 println!("{}", text);
-                /*
-                let data = match serde_json::from_str(&text) {
-                    Ok(Value::Object(m)) => m,
-                    Ok(o) => {
-                        println!("Expected object, got {:?}", o);
-                        return;
-                    }
-                    Err(e) => {
-                        println!("Could not parse json from client. {:?}", e);
-                        return;
-                    }
-                };
-                
-                if let Some((key, Value::Object(value))) = data.iter().next() {
-                    if let Some(handler) = CLIENT_LISTENERS.get(&key.as_str()) {
-                        handler.handle(self, ctx, value);
-                        return;
-                    }
-                }
-                println!("Could not handle message from client: {:?}", data);
-                */
             }
             ws::Message::Binary(mut bin) => {
                 println!("Received {:?} bytes", bin.len());
@@ -137,22 +101,23 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                                 return;
                             }
                         };
-                        match message {
+                        let result = match message {
                             ::proto::ClientToServer_oneof_message::authenticate(auth) => {
-                                println!("Got authenticate: {:?}", auth);
+                                MessageHandler.handle(self, ctx, auth)
                             }
                             ::proto::ClientToServer_oneof_message::load_inbox(load_inbox) => {
-                                println!("Got load_inbox: {:?}", load_inbox);
+                                Err(format_err!("Got load_inbox: {:?}", load_inbox))
                             }
                             ::proto::ClientToServer_oneof_message::load_email(load_email) => {
-                                println!("Got load_email: {:?}", load_email);
+                                Err(format_err!("Got load_email: {:?}", load_email))
                             }
                             ::proto::ClientToServer_oneof_message::load_attachment(
                                 load_attachment,
                             ) => {
-                                println!("Got load_attachment: {:?}", load_attachment);
+                                Err(format_err!("Got load_attachment: {:?}", load_attachment))
                             }
-                        }
+                        };
+                        println!("{:?}", result);
                     }
                     Err(e) => println!("Could not receive binary blob from client: {:?}", e),
                 }

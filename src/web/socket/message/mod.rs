@@ -5,17 +5,33 @@ use data::models::email_attachment::Attachment;
 use data::models::inbox::InboxWithAddress;
 use data::LoadInboxResponse;
 use std::net::SocketAddr;
+use Result;
 
-mod authentication;
-mod load_attachment;
-mod load_email;
-mod load_inbox;
+use proto::authenticate::AuthenticateRequest;
+
+// mod authentication;
+// mod load_attachment;
+// mod load_email;
+// mod load_inbox;
 
 pub type Map = ::serde_json::Map<String, ::serde_json::Value>;
-pub use self::authentication::AuthenticationMessage;
-pub use self::load_attachment::LoadAttachmentMessage;
-pub use self::load_email::LoadEmailMessage;
-pub use self::load_inbox::LoadInboxMessage;
+// pub use self::authentication::AuthenticationMessage;
+// pub use self::load_attachment::LoadAttachmentMessage;
+// pub use self::load_email::LoadEmailMessage;
+// pub use self::load_inbox::LoadInboxMessage;
+
+pub struct Handler;
+
+pub trait MessageHandler<TMessage> {
+    fn handle(&self, client: &mut Client, context: &mut <Client as Actor>::Context, value: TMessage) -> Result<()>;
+}
+
+impl MessageHandler<AuthenticateRequest> for Handler {
+    fn handle(&self, _client: &mut Client, _context: &mut <Client as Actor>::Context, value: AuthenticateRequest) -> Result<()> {
+        println!("Got authenticate: {:?}", value);
+        Ok(())
+    }
+}
 
 pub trait ClientMessage {
     fn handle(&self, client: &mut Client, context: &mut <Client as Actor>::Context, value: &Map);
@@ -62,3 +78,4 @@ pub struct EmailReceived {
 pub struct AttachmentLoaded {
     pub attachment_loaded: Attachment,
 }
+
