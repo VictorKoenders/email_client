@@ -36,7 +36,6 @@ impl ClientMessage for LoadAttachmentMessage {
                     _ => ctx.stop(),
                 }
                 fut::ok(())
-            })
-            .wait(ctx);
+            }).wait(ctx);
     }
 }

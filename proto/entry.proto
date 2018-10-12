@@ -18,7 +18,7 @@ message ClientToServer {
 message ServerToClient {
     oneof message {
         Error error = 1;
-        AuthenticateRequest authenticate = 2;
+        AuthenticateResponse authenticate = 2;
         LoadInboxResponse inbox = 3;
         LoadEmailResponse email = 4;
         LoadAttachmentResponse attachment = 5;

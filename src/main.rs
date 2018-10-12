@@ -48,6 +48,11 @@ fn main() {
                 .long("reset")
                 .help("Resets all emails and the database, then exits"),
         )
+        .arg(
+            Arg::with_name("no_imap")
+                .long("no_imap")
+                .help("Does not launch the imap connector. Will only connect to the database. The UI is not updated when a new email arrives")
+        )
         .get_matches();
 
     if matches.is_present("reset") {
@@ -58,15 +63,18 @@ fn main() {
 
     let ws_server = web::WebsocketServer::start_service();
     let database = data::Database::start_service();
-    let email_parser = mail_reader::EmailParser::start_service();
 
-    {
-        let recipient = database.clone().recipient();
-        email_parser
-            .clone()
-            .recipient()
-            .do_send(mail_reader::AddListener(recipient))
-            .expect("Could not register ws server to database");
+    if !matches.is_present("no_imap") {
+        let email_parser = mail_reader::EmailParser::start_service();
+
+        {
+            let recipient = database.clone().recipient();
+            email_parser
+                .clone()
+                .recipient()
+                .do_send(mail_reader::AddListener(recipient))
+                .expect("Could not register ws server to database");
+        }
     }
     {
         let recipient = ws_server.clone().recipient();

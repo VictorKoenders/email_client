@@ -130,7 +130,7 @@ impl Handler<LoadInbox> for Database {
 
     fn handle(&mut self, msg: LoadInbox, _ctx: &mut Self::Context) -> Result<LoadInboxResponse> {
         let connection = self.pool.get()?;
-        let inbox_with_address = InboxWithAddress::load_by_id(&connection, &msg.0.id)?;
+        let inbox_with_address = InboxWithAddress::load_by_id(&connection, &msg.0)?;
         let emails = EmailInfo::load_by_inbox(&connection, &inbox_with_address.id)?;
         Ok(LoadInboxResponse {
             inbox_with_address,

@@ -1,11 +1,11 @@
 import { email_client } from "./protobuf_compiled";
 
 interface HandlerListener {
-    email_received(email: server.EmailInfo): void;
-    email_loaded(email: server.Email): void;
-    attachment_loaded(attachment: server.Attachment): void;
-    inbox_loaded(address: server.Inbox, email: server.EmailInfo[]): void;
-    setup(addresses: server.Inbox[]): void;
+    email_received(email: email_client.IEmailHeader): void;
+    email_loaded(email: email_client.ILoadEmailResponse): void;
+    attachment_loaded(attachment: email_client.ILoadAttachmentResponse): void;
+    inbox_loaded(inbox: email_client.ILoadInboxResponse): void;
+    setup(addresses: email_client.IInboxHeader[]): void;
     authenticate_result(authenticated: boolean): void;
 }
 
@@ -13,7 +13,8 @@ export class Handler {
     private socket: WebSocket | null;
     private reconnect_timeout: NodeJS.Timer | null;
     private handler: HandlerListener;
-    private current_inbox: server.Inbox | null;
+    private current_inbox: email_client.IInboxHeader | null;
+    private ping_timer: NodeJS.Timer | undefined;
 
     constructor(handler: HandlerListener) {
         this.socket = null;
@@ -32,45 +33,45 @@ export class Handler {
                     password,
                 }
             }).finish());
-            this.socket.send(JSON.stringify({
-                authenticate: {
-                    username,
-                    password
-                }
-            }));
         }
     }
 
-    load_inbox(inbox: server.Inbox) {
+    load_inbox(inbox: email_client.IInboxHeader) {
         if (this.socket) {
-            this.socket.send(JSON.stringify({
-                load_inbox: inbox
-            }));
+            this.socket.send(email_client.ClientToServer.encode({
+                loadInbox: {
+                    id: inbox.id
+                }
+            }).finish());
         }
         this.current_inbox = inbox;
     }
 
-    load_email(email: server.EmailInfo) {
+    load_email(email: email_client.IEmailHeader) {
         if (this.socket) {
-            this.socket.send(JSON.stringify({
-                load_email: email
-            }));
+            this.socket.send(email_client.ClientToServer.encode({
+                loadEmail: {
+                    id: email.id
+                }
+            }).finish());
         }
     }
 
-    load_attachment(attachment: server.AttachmentInfo) {
+    load_attachment(attachment: email_client.AttachmentHeader) {
         if (this.socket) {
-            this.socket.send(JSON.stringify({
-                load_attachment: attachment
-            }));
+            this.socket.send(email_client.ClientToServer.encode({
+                loadAttachment: {
+                    id: attachment.id
+                }
+            }).finish());
         }
     }
 
     private connect() {
         this.socket = new WebSocket(
-            (document.location.protocol === "https:" ? "wss://" : "ws://") +
-            document.location.host +
-            document.location.pathname +
+            (document.location!.protocol === "https:" ? "wss://" : "ws://") +
+            document.location!.host +
+            document.location!.pathname +
             "ws/"
         );
         this.socket.onopen = this.onopen.bind(this);
@@ -80,10 +81,16 @@ export class Handler {
     }
 
     private onopen(ev: Event) {
+        this.ping_timer = setInterval(() => {
+            if (this.socket) this.socket.send(""); // ping
+        }, 1000);
     }
 
     private onclose(ev: CloseEvent) {
         this.socket = null;
+        if (this.ping_timer) {
+            clearTimeout(this.ping_timer);
+        }
         if (this.reconnect_timeout) {
             clearTimeout(this.reconnect_timeout);
         }
@@ -98,6 +105,52 @@ export class Handler {
     }
 
     private onmessage(ev: MessageEvent) {
+        const data = ev.data;
+        if (data instanceof Blob) {
+            const reader = new FileReader()
+            const self = this;
+            reader.onload = function () {
+                let buffer: Uint8Array;
+
+                if (reader.result instanceof ArrayBuffer) {
+                    buffer = new Uint8Array(reader.result);
+                } else if (typeof reader.result == "string") {
+                    let enc = new TextEncoder();
+                    buffer = enc.encode(reader.result);
+                } else {
+                    // reader.result == null
+                    return;
+                }
+                console.log(buffer);
+                let message = email_client.ServerToClient.decode(buffer);
+                if (message.authenticate != null) {
+                    self.handler.authenticate_result(message.authenticate.success || false);
+                    if (message.authenticate.success === true && message.authenticate.inboxes) {
+                        self.handler.setup(message.authenticate.inboxes);
+                    } else {
+                        self.handler.setup([]);
+                    }
+                } else if (message.attachment != null) {
+                    self.handler.attachment_loaded(message.attachment);
+                } else if (message.inbox != null) {
+                    console.log(message.inbox);
+                    self.handler.inbox_loaded(message.inbox);
+                } else {
+                    console.log("Unknown message", message);
+                }
+            };
+            reader.readAsText(data);
+        }
+        /*
+        console.log(ev.data);
+        var bytes = Array.prototype.slice.call(ev.data, 0, ev.data.size);
+        console.log(bytes);
+        let data = ev.data as Uint8Array;
+        if (data != null) {
+            let message = email_client.ServerToClient.decode(data);
+            console.log(message);
+        }
+        /*return;
         let json: server.WebSocketMessage = JSON.parse(ev.data);
         if (json.init) {
             this.handler.setup(json.init);
@@ -123,6 +176,6 @@ export class Handler {
             this.handler.authenticate_result(json.authenticate_result);
         } else {
             console.log("Unknown server message", json);
-        }
+        }*/
     }
 }

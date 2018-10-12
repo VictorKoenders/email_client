@@ -15,6 +15,16 @@ pub struct InboxWithAddress {
     pub unread_count: i32,
 }
 
+impl Into<::proto::inbox::InboxHeader> for InboxWithAddress {
+    fn into(self) -> ::proto::inbox::InboxHeader {
+        let mut header = ::proto::inbox::InboxHeader::default();
+        header.id = self.id.to_string();
+        header.name = self.name;
+        header.unread_count = self.unread_count;
+        header
+    }
+}
+
 #[derive(Queryable)] //, QueryableByName)]
 pub struct InboxWithUnread {
     // #[sql_type = "UuidType"]

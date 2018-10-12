@@ -4,14 +4,15 @@ import { MailRenderer } from "./MailRenderer";
 import { AttachmentPopup } from "./AttachmentPopup";
 import { Handler } from "../websocket";
 import { Login } from "./Login";
+import { email_client } from "../protobuf_compiled";
 
 interface State {
-    inboxes: server.Inbox[];
-    emails: server.EmailInfo[];
-    current_inbox: server.Inbox | null;
-    current_email_info: server.EmailInfo | null;
-    current_email: server.Email | null;
-    current_attachment: server.Attachment | null;
+    inboxes: email_client.IInboxHeader[];
+    emails: email_client.IEmailHeader[];
+    current_inbox: email_client.ILoadInboxResponse | null;
+    current_email_info: email_client.IEmailHeader | null;
+    current_email: email_client.ILoadEmailResponse | null;
+    current_attachment: email_client.ILoadAttachmentResponse | null;
     handler: Handler;
     authenticated: boolean;
     failed_login: boolean;
@@ -37,19 +38,19 @@ export class Root extends React.Component<Props, State> {
         };
     }
 
-    email_received(email: server.EmailInfo) {
+    email_received(email: email_client.EmailHeader) {
         this.setState(state => {
             let emails = state.emails.slice();
             let inboxes = state.inboxes.slice();
             let current_inbox = state.current_inbox;
 
-            let inbox = inboxes.find(a => a.id == email.inbox_id);
+            let inbox = inboxes.find(a => a.id == email.inboxId);
             if (inbox) {
-                inbox.unread_count++;
+                inbox.unreadCount = (inbox.unreadCount || 0) + 1;
             }
-            if (current_inbox && current_inbox.id == email.inbox_id) {
-                current_inbox.unread_count++;
-                if (email.inbox_id == current_inbox.id) {
+            if (current_inbox && current_inbox.id == email.inboxId) {
+                current_inbox.unreadCount = (current_inbox.unreadCount || 0) + 1;
+                if (email.inboxId == current_inbox.id) {
                     emails.splice(0, 0, email);
                 }
             }
@@ -57,22 +58,22 @@ export class Root extends React.Component<Props, State> {
         });
     }
 
-    inbox_loaded(inbox: server.Inbox, emails: server.Email[]) {
+    inbox_loaded(inbox: email_client.LoadInboxResponse) {
         this.setState(state => {
             if (state.current_inbox && state.current_inbox.name == inbox.name) {
-                return { emails } as any;
+                return { emails: inbox.emails } as any;
             } else {
                 return {};
             }
         });
     }
 
-    attachment_loaded(attachment: server.Attachment) {
+    attachment_loaded(attachment: email_client.ILoadAttachmentResponse) {
         this.setState({
             current_attachment: attachment
         });
     }
-    email_loaded(email: server.Email) {
+    email_loaded(email: email_client.ILoadEmailResponse) {
         this.setState(state => {
             if (state.current_email_info && state.current_email_info.id == email.id) {
                 return { current_email: email } as any;
@@ -81,22 +82,22 @@ export class Root extends React.Component<Props, State> {
             }
         });
     }
-    setup(inboxes: server.Inbox[]) {
+    setup(inboxes: email_client.IInboxHeader[]) {
         this.setState({ inboxes });
     }
 
-    select_inbox(inbox: server.Inbox) {
+    select_inbox(inbox: email_client.IInboxHeader) {
         this.state.handler.load_inbox(inbox);
         this.setState({
             current_inbox: inbox
         });
     }
 
-    select_email(email: server.EmailInfo) {
+    select_email(email: email_client.IEmailHeader) {
         if (!email.read) {
             email.read = true;
             if (this.state.current_inbox) {
-                this.state.current_inbox.unread_count--;
+                this.state.current_inbox.unreadCount = (this.state.current_inbox.unreadCount || 1) - 1;
             }
         }
         this.state.handler.load_email(email);
