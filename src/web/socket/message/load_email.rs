@@ -4,11 +4,12 @@ use data::models::email::EmailInfo;
 use serde_json::Value;
 use web::socket::client::{Client, ContextSender};
 use web::socket::message::{ClientMessage, EmailLoaded, Error, Map};
+use proto::email::LoadEmailRequest;
 
 pub struct LoadEmailMessage;
 
-impl ClientMessage for LoadEmailMessage {
-    fn handle(&self, client: &mut Client, ctx: &mut <Client as Actor>::Context, value: &Map) {
+impl MessageHandler<LoadEmailRequest> for LoadEmailMessage {
+    fn handle(&self, client: &mut Client, ctx: &mut <Client as Actor>::Context, value: LoadEmailRequest) {
         if !client.authenticated {
             ctx.send(&Error {
                 error: "Not authenticated",
