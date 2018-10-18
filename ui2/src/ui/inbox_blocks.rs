@@ -7,6 +7,7 @@ pub enum Msg {
     EditInbox(usize),
 }
 
+#[derive(Default)]
 pub struct InboxBlocks {
     pub inboxes: Vec<Rc<Inbox>>,
     pub onselect: Option<Callback<usize>>,

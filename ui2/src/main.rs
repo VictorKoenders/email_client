@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate yew;
 
+mod network;
 mod ui;
 
 use crate::ui::inbox_blocks::InboxBlocks;
@@ -36,7 +37,6 @@ impl Component for Model {
 
     fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
         Model {
-            console: ConsoleService::new(),
             inboxes: vec![
                 Rc::new(Inbox {
                     id: String::from("1"),
@@ -59,7 +59,6 @@ impl Component for Model {
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        self.console.log(&format!("{:?}", msg));
         match msg {
             Msg::SelectInbox(index) => {
                 self.current_inbox = Some(self.inboxes[index].clone());
