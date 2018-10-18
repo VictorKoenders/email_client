@@ -1,0 +1,9 @@
+[package]
+authors = ["Victor Koenders <victor.koenders@gmail.com>"]
+edition = "2018"
+name = "ui2"
+version = "0.1.0"
+
+[dependencies]
+yew = { git = "https://github.com/DenisKolodin/yew" }
+
