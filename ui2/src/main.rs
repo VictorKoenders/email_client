@@ -3,11 +3,11 @@ extern crate yew;
 
 mod ui;
 
-use yew::prelude::*;
-use yew::services::console::ConsoleService;
-use std::rc::Rc;
 use crate::ui::inbox_blocks::InboxBlocks;
 use crate::ui::inbox_list::InboxList;
+use std::rc::Rc;
+use yew::prelude::*;
+use yew::services::console::ConsoleService;
 
 #[derive(Default)]
 pub struct Model {
@@ -27,7 +27,7 @@ pub struct Inbox {
 #[derive(Debug)]
 pub enum Msg {
     SelectInbox(usize),
-    EditInbox(usize)
+    EditInbox(usize),
 }
 
 impl Component for Model {
@@ -38,7 +38,21 @@ impl Component for Model {
         Model {
             console: ConsoleService::new(),
             inboxes: vec![
-                Rc::new(Inbox { id: String::from("1"), name: String::from("Catch-all"), unread_count: 0 }),
+                Rc::new(Inbox {
+                    id: String::from("1"),
+                    name: String::from("Catch-all"),
+                    unread_count: 0,
+                }),
+                Rc::new(Inbox {
+                    id: String::from("2"),
+                    name: String::from("Pixelbar"),
+                    unread_count: 0,
+                }),
+                Rc::new(Inbox {
+                    id: String::from("3"),
+                    name: String::from("Spam"),
+                    unread_count: 1000,
+                }),
             ],
             ..Default::default()
         }
@@ -64,12 +78,20 @@ impl Renderable<Model> for Model {
         if let Some(inbox) = &self.current_inbox {
             html! {
                 <>
-                    // <InboxList: inboxes: &self.inboxes, current: &inbox, />
-                    <InboxList: />
+                    <InboxList:
+                        inboxes=self.inboxes.clone(),
+                        onselect=Msg::SelectInbox,
+                        current=Some(inbox.clone()),
+                    />
                 </>
             }
         } else {
-            ui::inbox_blocks::InboxBlocks { inboxes: &self.inboxes }.view()
+            html!{
+                <InboxBlocks:
+                    inboxes=self.inboxes.clone(),
+                    onselect=Msg::SelectInbox,
+                />
+            }
         }
     }
 }
@@ -79,4 +101,3 @@ fn main() {
     App::<Model>::new().mount_to_body();
     yew::run_loop();
 }
-

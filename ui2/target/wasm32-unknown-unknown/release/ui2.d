@@ -1,1 +1,0 @@
-/home/trangar/Development/Rust/email_client/ui2/target/wasm32-unknown-unknown/release/ui2.wasm: /home/trangar/Development/Rust/email_client/ui2/src/main.rs /home/trangar/Development/Rust/email_client/ui2/src/ui/inbox_blocks.rs /home/trangar/Development/Rust/email_client/ui2/src/ui/inbox_list.rs /home/trangar/Development/Rust/email_client/ui2/src/ui/mod.rs
