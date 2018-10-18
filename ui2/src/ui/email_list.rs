@@ -11,11 +11,11 @@ impl Component for EmailList {
     type Message = Msg;
     type Properties = Properties;
 
-    fn create(props: Self::Properties, _: ComponentLink<Self>) -> Self {
+    fn create(_props: Self::Properties, _: ComponentLink<Self>) -> Self {
         Self {}
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
+    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
         true
     }
 

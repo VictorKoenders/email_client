@@ -264,6 +264,10 @@ dependencies = [
 name = "ui2"
 version = "0.1.0"
 dependencies = [
+ "bincode 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.80 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.80 (registry+https://github.com/rust-lang/crates.io-index)",
  "yew 0.5.0 (git+https://github.com/DenisKolodin/yew?rev=33ebfcbe5e5fe4dda97a9cadd1e6bb4e9483018a)",
 ]
 
