@@ -1,7 +1,8 @@
 import * as React from "react";
+import { email_client } from "../protobuf_compiled";
 
 interface Props {
-    current: server.Attachment | null;
+    current: email_client.ILoadAttachmentResponse | null;
 }
 
 interface State {
@@ -27,17 +28,17 @@ export class AttachmentPopup extends React.Component<Props, State> {
     render() {
         let attachment_name = "unknown";
         let attachment_content = null;
-        if (this.props.current) {
+        if (this.props.current && this.props.current.contents && this.props.current.mimeType) {
             if (this.props.current.name) {
                 attachment_name = this.props.current.name;
             }
-            attachment_name += " (" + this.props.current.mime_type + ")";
+            attachment_name += " (" + this.props.current.mimeType + ")";
 
-            if (AttachmentPopup.is_renderable_mime_type(this.props.current.mime_type)) {
+            if (AttachmentPopup.is_renderable_mime_type(this.props.current.mimeType)) {
                 var base64 = base64ArrayBuffer(this.props.current.contents);
-                attachment_content = <img src={"data:" + this.props.current.mime_type + ";base64," + base64} />;
+                attachment_content = <img src={"data:" + this.props.current.mimeType + ";base64," + base64} />;
             }
-            if (AttachmentPopup.is_text_mime_type(this.props.current.mime_type)) {
+            if (AttachmentPopup.is_text_mime_type(this.props.current.mimeType)) {
                 attachment_content = <pre>
                     {String.fromCharCode.apply(null, this.props.current.contents)}
                 </pre>;
@@ -74,11 +75,10 @@ export class AttachmentPopup extends React.Component<Props, State> {
 }
 
 
-function base64ArrayBuffer(arrayBuffer: number[]) {
+function base64ArrayBuffer(bytes: Uint8Array) {
     var base64 = ''
     var encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
-    var bytes = new Uint8Array(arrayBuffer)
     var byteLength = bytes.byteLength
     var byteRemainder = byteLength % 3
     var mainLength = byteLength - byteRemainder

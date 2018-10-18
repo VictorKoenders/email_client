@@ -8,6 +8,9 @@
         "jsx": "react",
         "strict": true,
     },
+    "files": [
+        "src/protobuf_compiled.d.ts"
+    ],
     "include": [
         "./src/**/*"
     ]

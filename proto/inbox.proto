@@ -3,6 +3,12 @@ package email_client;
 
 import "email.proto";
 
+message InboxHeader {
+    string id = 1;
+    string name = 2;
+    int32 unread_count = 4;
+}
+
 message LoadInboxRequest {
     string id = 1;
 }

@@ -120,7 +120,7 @@ export namespace email_client {
         error?: (email_client.IError|null);
 
         /** ServerToClient authenticate */
-        authenticate?: (email_client.IAuthenticateRequest|null);
+        authenticate?: (email_client.IAuthenticateResponse|null);
 
         /** ServerToClient inbox */
         inbox?: (email_client.ILoadInboxResponse|null);
@@ -145,7 +145,7 @@ export namespace email_client {
         public error?: (email_client.IError|null);
 
         /** ServerToClient authenticate. */
-        public authenticate?: (email_client.IAuthenticateRequest|null);
+        public authenticate?: (email_client.IAuthenticateResponse|null);
 
         /** ServerToClient inbox. */
         public inbox?: (email_client.ILoadInboxResponse|null);
@@ -739,6 +739,9 @@ export namespace email_client {
 
         /** AuthenticateResponse success */
         success?: (boolean|null);
+
+        /** AuthenticateResponse inboxes */
+        inboxes?: (email_client.IInboxHeader[]|null);
     }
 
     /** Represents an AuthenticateResponse. */
@@ -752,6 +755,9 @@ export namespace email_client {
 
         /** AuthenticateResponse success. */
         public success: boolean;
+
+        /** AuthenticateResponse inboxes. */
+        public inboxes: email_client.IInboxHeader[];
 
         /**
          * Creates a new AuthenticateResponse instance using the specified properties.
@@ -819,6 +825,312 @@ export namespace email_client {
 
         /**
          * Converts this AuthenticateResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of an InboxHeader. */
+    interface IInboxHeader {
+
+        /** InboxHeader id */
+        id?: (string|null);
+
+        /** InboxHeader name */
+        name?: (string|null);
+
+        /** InboxHeader unreadCount */
+        unreadCount?: (number|null);
+    }
+
+    /** Represents an InboxHeader. */
+    class InboxHeader implements IInboxHeader {
+
+        /**
+         * Constructs a new InboxHeader.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: email_client.IInboxHeader);
+
+        /** InboxHeader id. */
+        public id: string;
+
+        /** InboxHeader name. */
+        public name: string;
+
+        /** InboxHeader unreadCount. */
+        public unreadCount: number;
+
+        /**
+         * Creates a new InboxHeader instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns InboxHeader instance
+         */
+        public static create(properties?: email_client.IInboxHeader): email_client.InboxHeader;
+
+        /**
+         * Encodes the specified InboxHeader message. Does not implicitly {@link email_client.InboxHeader.verify|verify} messages.
+         * @param message InboxHeader message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: email_client.IInboxHeader, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified InboxHeader message, length delimited. Does not implicitly {@link email_client.InboxHeader.verify|verify} messages.
+         * @param message InboxHeader message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: email_client.IInboxHeader, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes an InboxHeader message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns InboxHeader
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): email_client.InboxHeader;
+
+        /**
+         * Decodes an InboxHeader message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns InboxHeader
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): email_client.InboxHeader;
+
+        /**
+         * Verifies an InboxHeader message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates an InboxHeader message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns InboxHeader
+         */
+        public static fromObject(object: { [k: string]: any }): email_client.InboxHeader;
+
+        /**
+         * Creates a plain object from an InboxHeader message. Also converts values to other types if specified.
+         * @param message InboxHeader
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: email_client.InboxHeader, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this InboxHeader to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of a LoadInboxRequest. */
+    interface ILoadInboxRequest {
+
+        /** LoadInboxRequest id */
+        id?: (string|null);
+    }
+
+    /** Represents a LoadInboxRequest. */
+    class LoadInboxRequest implements ILoadInboxRequest {
+
+        /**
+         * Constructs a new LoadInboxRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: email_client.ILoadInboxRequest);
+
+        /** LoadInboxRequest id. */
+        public id: string;
+
+        /**
+         * Creates a new LoadInboxRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns LoadInboxRequest instance
+         */
+        public static create(properties?: email_client.ILoadInboxRequest): email_client.LoadInboxRequest;
+
+        /**
+         * Encodes the specified LoadInboxRequest message. Does not implicitly {@link email_client.LoadInboxRequest.verify|verify} messages.
+         * @param message LoadInboxRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: email_client.ILoadInboxRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified LoadInboxRequest message, length delimited. Does not implicitly {@link email_client.LoadInboxRequest.verify|verify} messages.
+         * @param message LoadInboxRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: email_client.ILoadInboxRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a LoadInboxRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns LoadInboxRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): email_client.LoadInboxRequest;
+
+        /**
+         * Decodes a LoadInboxRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns LoadInboxRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): email_client.LoadInboxRequest;
+
+        /**
+         * Verifies a LoadInboxRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a LoadInboxRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns LoadInboxRequest
+         */
+        public static fromObject(object: { [k: string]: any }): email_client.LoadInboxRequest;
+
+        /**
+         * Creates a plain object from a LoadInboxRequest message. Also converts values to other types if specified.
+         * @param message LoadInboxRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: email_client.LoadInboxRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this LoadInboxRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of a LoadInboxResponse. */
+    interface ILoadInboxResponse {
+
+        /** LoadInboxResponse id */
+        id?: (string|null);
+
+        /** LoadInboxResponse name */
+        name?: (string|null);
+
+        /** LoadInboxResponse addresses */
+        addresses?: (string[]|null);
+
+        /** LoadInboxResponse unreadCount */
+        unreadCount?: (number|null);
+
+        /** LoadInboxResponse emails */
+        emails?: (email_client.IEmailHeader[]|null);
+    }
+
+    /** Represents a LoadInboxResponse. */
+    class LoadInboxResponse implements ILoadInboxResponse {
+
+        /**
+         * Constructs a new LoadInboxResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: email_client.ILoadInboxResponse);
+
+        /** LoadInboxResponse id. */
+        public id: string;
+
+        /** LoadInboxResponse name. */
+        public name: string;
+
+        /** LoadInboxResponse addresses. */
+        public addresses: string[];
+
+        /** LoadInboxResponse unreadCount. */
+        public unreadCount: number;
+
+        /** LoadInboxResponse emails. */
+        public emails: email_client.IEmailHeader[];
+
+        /**
+         * Creates a new LoadInboxResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns LoadInboxResponse instance
+         */
+        public static create(properties?: email_client.ILoadInboxResponse): email_client.LoadInboxResponse;
+
+        /**
+         * Encodes the specified LoadInboxResponse message. Does not implicitly {@link email_client.LoadInboxResponse.verify|verify} messages.
+         * @param message LoadInboxResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: email_client.ILoadInboxResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified LoadInboxResponse message, length delimited. Does not implicitly {@link email_client.LoadInboxResponse.verify|verify} messages.
+         * @param message LoadInboxResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: email_client.ILoadInboxResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a LoadInboxResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns LoadInboxResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): email_client.LoadInboxResponse;
+
+        /**
+         * Decodes a LoadInboxResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns LoadInboxResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): email_client.LoadInboxResponse;
+
+        /**
+         * Verifies a LoadInboxResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a LoadInboxResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns LoadInboxResponse
+         */
+        public static fromObject(object: { [k: string]: any }): email_client.LoadInboxResponse;
+
+        /**
+         * Creates a plain object from a LoadInboxResponse message. Also converts values to other types if specified.
+         * @param message LoadInboxResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: email_client.LoadInboxResponse, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this LoadInboxResponse to JSON.
          * @returns JSON object
          */
         public toJSON(): { [k: string]: any };
@@ -1179,210 +1491,6 @@ export namespace email_client {
 
         /**
          * Converts this LoadEmailResponse to JSON.
-         * @returns JSON object
-         */
-        public toJSON(): { [k: string]: any };
-    }
-
-    /** Properties of a LoadInboxRequest. */
-    interface ILoadInboxRequest {
-
-        /** LoadInboxRequest id */
-        id?: (string|null);
-    }
-
-    /** Represents a LoadInboxRequest. */
-    class LoadInboxRequest implements ILoadInboxRequest {
-
-        /**
-         * Constructs a new LoadInboxRequest.
-         * @param [properties] Properties to set
-         */
-        constructor(properties?: email_client.ILoadInboxRequest);
-
-        /** LoadInboxRequest id. */
-        public id: string;
-
-        /**
-         * Creates a new LoadInboxRequest instance using the specified properties.
-         * @param [properties] Properties to set
-         * @returns LoadInboxRequest instance
-         */
-        public static create(properties?: email_client.ILoadInboxRequest): email_client.LoadInboxRequest;
-
-        /**
-         * Encodes the specified LoadInboxRequest message. Does not implicitly {@link email_client.LoadInboxRequest.verify|verify} messages.
-         * @param message LoadInboxRequest message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        public static encode(message: email_client.ILoadInboxRequest, writer?: $protobuf.Writer): $protobuf.Writer;
-
-        /**
-         * Encodes the specified LoadInboxRequest message, length delimited. Does not implicitly {@link email_client.LoadInboxRequest.verify|verify} messages.
-         * @param message LoadInboxRequest message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        public static encodeDelimited(message: email_client.ILoadInboxRequest, writer?: $protobuf.Writer): $protobuf.Writer;
-
-        /**
-         * Decodes a LoadInboxRequest message from the specified reader or buffer.
-         * @param reader Reader or buffer to decode from
-         * @param [length] Message length if known beforehand
-         * @returns LoadInboxRequest
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): email_client.LoadInboxRequest;
-
-        /**
-         * Decodes a LoadInboxRequest message from the specified reader or buffer, length delimited.
-         * @param reader Reader or buffer to decode from
-         * @returns LoadInboxRequest
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): email_client.LoadInboxRequest;
-
-        /**
-         * Verifies a LoadInboxRequest message.
-         * @param message Plain object to verify
-         * @returns `null` if valid, otherwise the reason why it is not
-         */
-        public static verify(message: { [k: string]: any }): (string|null);
-
-        /**
-         * Creates a LoadInboxRequest message from a plain object. Also converts values to their respective internal types.
-         * @param object Plain object
-         * @returns LoadInboxRequest
-         */
-        public static fromObject(object: { [k: string]: any }): email_client.LoadInboxRequest;
-
-        /**
-         * Creates a plain object from a LoadInboxRequest message. Also converts values to other types if specified.
-         * @param message LoadInboxRequest
-         * @param [options] Conversion options
-         * @returns Plain object
-         */
-        public static toObject(message: email_client.LoadInboxRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
-
-        /**
-         * Converts this LoadInboxRequest to JSON.
-         * @returns JSON object
-         */
-        public toJSON(): { [k: string]: any };
-    }
-
-    /** Properties of a LoadInboxResponse. */
-    interface ILoadInboxResponse {
-
-        /** LoadInboxResponse id */
-        id?: (string|null);
-
-        /** LoadInboxResponse name */
-        name?: (string|null);
-
-        /** LoadInboxResponse addresses */
-        addresses?: (string[]|null);
-
-        /** LoadInboxResponse unreadCount */
-        unreadCount?: (number|null);
-
-        /** LoadInboxResponse emails */
-        emails?: (email_client.IEmailHeader[]|null);
-    }
-
-    /** Represents a LoadInboxResponse. */
-    class LoadInboxResponse implements ILoadInboxResponse {
-
-        /**
-         * Constructs a new LoadInboxResponse.
-         * @param [properties] Properties to set
-         */
-        constructor(properties?: email_client.ILoadInboxResponse);
-
-        /** LoadInboxResponse id. */
-        public id: string;
-
-        /** LoadInboxResponse name. */
-        public name: string;
-
-        /** LoadInboxResponse addresses. */
-        public addresses: string[];
-
-        /** LoadInboxResponse unreadCount. */
-        public unreadCount: number;
-
-        /** LoadInboxResponse emails. */
-        public emails: email_client.IEmailHeader[];
-
-        /**
-         * Creates a new LoadInboxResponse instance using the specified properties.
-         * @param [properties] Properties to set
-         * @returns LoadInboxResponse instance
-         */
-        public static create(properties?: email_client.ILoadInboxResponse): email_client.LoadInboxResponse;
-
-        /**
-         * Encodes the specified LoadInboxResponse message. Does not implicitly {@link email_client.LoadInboxResponse.verify|verify} messages.
-         * @param message LoadInboxResponse message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        public static encode(message: email_client.ILoadInboxResponse, writer?: $protobuf.Writer): $protobuf.Writer;
-
-        /**
-         * Encodes the specified LoadInboxResponse message, length delimited. Does not implicitly {@link email_client.LoadInboxResponse.verify|verify} messages.
-         * @param message LoadInboxResponse message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        public static encodeDelimited(message: email_client.ILoadInboxResponse, writer?: $protobuf.Writer): $protobuf.Writer;
-
-        /**
-         * Decodes a LoadInboxResponse message from the specified reader or buffer.
-         * @param reader Reader or buffer to decode from
-         * @param [length] Message length if known beforehand
-         * @returns LoadInboxResponse
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): email_client.LoadInboxResponse;
-
-        /**
-         * Decodes a LoadInboxResponse message from the specified reader or buffer, length delimited.
-         * @param reader Reader or buffer to decode from
-         * @returns LoadInboxResponse
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): email_client.LoadInboxResponse;
-
-        /**
-         * Verifies a LoadInboxResponse message.
-         * @param message Plain object to verify
-         * @returns `null` if valid, otherwise the reason why it is not
-         */
-        public static verify(message: { [k: string]: any }): (string|null);
-
-        /**
-         * Creates a LoadInboxResponse message from a plain object. Also converts values to their respective internal types.
-         * @param object Plain object
-         * @returns LoadInboxResponse
-         */
-        public static fromObject(object: { [k: string]: any }): email_client.LoadInboxResponse;
-
-        /**
-         * Creates a plain object from a LoadInboxResponse message. Also converts values to other types if specified.
-         * @param message LoadInboxResponse
-         * @param [options] Conversion options
-         * @returns Plain object
-         */
-        public static toObject(message: email_client.LoadInboxResponse, options?: $protobuf.IConversionOptions): { [k: string]: any };
-
-        /**
-         * Converts this LoadInboxResponse to JSON.
          * @returns JSON object
          */
         public toJSON(): { [k: string]: any };

@@ -18,6 +18,20 @@ pub struct EmailInfo {
     pub read: bool,
 }
 
+impl Into<::proto::email::EmailHeader> for EmailInfo {
+    fn into(self) -> ::proto::email::EmailHeader {
+        let mut header = ::proto::email::EmailHeader::default();
+
+        header.id = self.id.to_string();
+        header.from = self.from.unwrap_or_default();
+        header.to = self.to.unwrap_or_default();
+        header.subject = self.subject.unwrap_or_default();
+        header.read = self.read;
+
+        header
+    }
+}
+
 impl EmailInfo {
     pub fn load_by_inbox(connection: &PgConnection, uuid: &Uuid) -> Result<Vec<EmailInfo>> {
         let query = email::table

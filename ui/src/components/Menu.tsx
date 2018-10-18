@@ -1,16 +1,17 @@
 import * as React from "react";
+import { email_client } from "../protobuf_compiled";
 
 interface State {
     offset: number;
 }
 
 interface Props {
-    inboxes: server.Inbox[];
-    emails: server.EmailInfo[];
-    active_inbox: server.Inbox | null;
-    active_email: server.EmailInfo | null;
-    onInboxSelected: (addr: server.Inbox) => void;
-    onEmailSelected: (email: server.EmailInfo) => void;
+    inboxes: email_client.IInboxHeader[];
+    emails: email_client.IEmailHeader[];
+    active_inbox: email_client.ILoadInboxResponse | null;
+    active_email: email_client.ILoadEmailResponse | null;
+    onInboxSelected: (addr: email_client.IInboxHeader) => void;
+    onEmailSelected: (email: email_client.IEmailHeader) => void;
 }
 
 export class Menu extends React.Component<Props, State> {
@@ -27,7 +28,7 @@ export class Menu extends React.Component<Props, State> {
         }));
     }
 
-    select_inbox(inbox: server.Inbox, ev: React.MouseEvent<HTMLLIElement>) {
+    select_inbox(inbox: email_client.IInboxHeader, ev: React.MouseEvent<HTMLLIElement>) {
         ev.preventDefault();
         ev.stopPropagation();
 
@@ -40,7 +41,7 @@ export class Menu extends React.Component<Props, State> {
         return false;
     }
 
-    select_email(email: server.Email, ev: React.MouseEvent<HTMLLIElement>) {
+    select_email(email: email_client.IEmailHeader, ev: React.MouseEvent<HTMLLIElement>) {
         ev.preventDefault();
         ev.stopPropagation();
 
@@ -49,22 +50,22 @@ export class Menu extends React.Component<Props, State> {
         return false;
     }
 
-    render_inbox(inbox: server.Inbox, index: number) {
+    render_inbox(inbox: email_client.ILoadInboxResponse, index: number) {
         return <li key={index} onClick={this.select_inbox.bind(this, inbox)}
-            className={this.props.active_inbox && this.props.active_inbox.id == inbox.id ? "active": ""}>
-            {inbox.unread_count > 0
-                ? <b>{inbox.name} ({inbox.unread_count})</b>
+            className={this.props.active_inbox && this.props.active_inbox.id == inbox.id ? "active" : ""}>
+            {inbox.unreadCount
+                ? <b>{inbox.name} ({inbox.unreadCount})</b>
                 : inbox.name
             }<br />
         </li>
     }
 
-    render_email(email: server.Email, index: number) {
+    render_email(email: email_client.ILoadEmailResponse, index: number) {
         return <li key={index} onClick={this.select_email.bind(this, email)}
-            className={this.props.active_email && this.props.active_email.id == email.id ? "active":""}>
-        {email.read
-            ? email.from
-            : <b>{email.from} *</b>}
+            className={this.props.active_email && this.props.active_email.id == email.id ? "active" : ""}>
+            {email.read
+                ? email.from
+                : <b>{email.from} *</b>}
             <br />
             {email.subject}
         </li>
@@ -72,13 +73,13 @@ export class Menu extends React.Component<Props, State> {
 
     render() {
         return <div className="sliding-row">
-            <div style={{left: (-this.state.offset * 100) + "%"}}>
+            <div style={{ left: (-this.state.offset * 100) + "%" }}>
                 <ul className="box-list">
                     {this.props.inboxes.map(this.render_inbox.bind(this))}
                 </ul>
             </div>
-            <div style={{left: (-this.state.offset * 100) + "%"}}>
-                <div onClick={this.back.bind(this)} style={{cursor: "pointer"}}>
+            <div style={{ left: (-this.state.offset * 100) + "%" }}>
+                <div onClick={this.back.bind(this)} style={{ cursor: "pointer" }}>
                     &lt; Back
                 </div>
                 <ul className="box-list">

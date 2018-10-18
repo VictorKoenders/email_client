@@ -1,13 +1,14 @@
 import * as React from "react";
 import { Handler } from "../websocket";
 import { AttachmentPopup, MODAL_ID as ATTACHMENT_MODAL_ID } from "./AttachmentPopup";
+import { email_client } from "../protobuf_compiled";
 
 interface State {
     show_html: boolean;
 }
 
 interface Props {
-    email: server.Email;
+    email: email_client.ILoadEmailResponse;
     handler: Handler;
 }
 
@@ -28,33 +29,34 @@ export class MailRenderer extends React.Component<Props, State> {
         return false;
     }
 
-    select_attachment(attachment: server.AttachmentInfo, ev: React.MouseEvent<HTMLButtonElement>) {
+    select_attachment(attachment: email_client.AttachmentHeader, ev: React.MouseEvent<HTMLButtonElement>) {
         this.props.handler.load_attachment(attachment);
     }
 
-    download_attachment(attachment: server.AttachmentInfo, ev: React.MouseEvent<HTMLButtonElement>) {
+    download_attachment(attachment: email_client.AttachmentHeader, ev: React.MouseEvent<HTMLButtonElement>) {
         ev.preventDefault();
         ev.stopPropagation();
 
-        document.location.href = "attachment/" + attachment.id;
+        document.location!.href = "attachment/" + attachment.id;
 
         return false;
     }
 
     render_attachments() {
+        if (this.props.email.attachments == null) return null;
         const attachments = [];
         for (const attachment of this.props.email.attachments) {
-            const name = attachment.name || ("unknown " + attachment.mime_type);
-            if (AttachmentPopup.is_renderable_mime_type(attachment.mime_type)) {
+            const name = attachment.name || ("unknown " + attachment.mimeType);
+            if (AttachmentPopup.is_renderable_mime_type(attachment.mimeType || "")) {
                 attachments.push(
-                    <button type="button" className="btn btn-secondary" key={attachment.id}
+                    <button type="button" className="btn btn-secondary" key={attachment.id || ""}
                         onClick={this.select_attachment.bind(this, attachment)} data-toggle="modal" data-target={"#" + ATTACHMENT_MODAL_ID}>
                         {name}
                     </button>
                 );
             } else {
                 attachments.push(
-                    <button type="button" className="btn btn-secondary" key={attachment.id}
+                    <button type="button" className="btn btn-secondary" key={attachment.id || ""}
                         onClick={this.download_attachment.bind(this, attachment)}>
                         {name}
                     </button>
@@ -85,9 +87,9 @@ export class MailRenderer extends React.Component<Props, State> {
 
     render_body() {
         if (this.state.show_html) {
-            return <div dangerouslySetInnerHTML={{ __html: this.props.email.html_body || "" }} />;
+            return <div dangerouslySetInnerHTML={{ __html: this.props.email.htmlBody || "" }} />;
         } else {
-            return (this.props.email.text_plain_body || "").split('\n').map((p, i) => <React.Fragment key={i}>{p}<br /></React.Fragment>);
+            return (this.props.email.textPlainBody || "").split('\n').map((p, i) => <React.Fragment key={i}>{p}<br /></React.Fragment>);
         }
     }
 
@@ -96,7 +98,7 @@ export class MailRenderer extends React.Component<Props, State> {
             <h2>{this.props.email.subject}</h2>
             {this.props.email.from} -&gt; {this.props.email.to}<br /><br />
             {this.render_attachments()}
-            {this.props.email.html_body ? this.render_text_html_tabs() : null}
+            {this.props.email.htmlBody ? this.render_text_html_tabs() : null}
             {this.render_body()}
         </div>;
     }

@@ -1,15 +1,23 @@
-use super::message::{MessageHandler as _MessageHandler, Handler as MessageHandler, Connect, Disconnect, EmailReceived};
+use super::message::{
+    Connect, Disconnect, EmailReceived, Handler as MessageHandler,
+    MessageHandler as _MessageHandler,
+};
 use actix::{
     fut, Actor, ActorContext, ActorFuture, AsyncContext, ContextFutureSpawner, Handler, Running,
     StreamHandler, WrapFuture,
 };
 use actix_web::ws;
 use data::NewEmail;
+use proto::authenticate::AuthenticateResponse;
+use proto::inbox::LoadInboxResponse;
+use proto::{Error, ServerToClient};
+use protobuf::Message;
 use serde::Serialize;
 use serde_json;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use web::State as ServerState;
+use Result;
 
 #[derive(Default)]
 pub struct Client {
@@ -47,16 +55,14 @@ impl Actor for Client {
             .send(Connect {
                 client_addr,
                 remote_addr,
-            })
-            .into_actor(self)
+            }).into_actor(self)
             .then(|res, act, ctx| {
                 match res {
                     Ok(id) => act.id = id,
                     _ => ctx.stop(),
                 }
                 fut::ok(())
-            })
-            .wait(ctx);
+            }).wait(ctx);
     }
     fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
         ctx.state()
@@ -64,6 +70,46 @@ impl Actor for Client {
             .do_send(Disconnect { id: self.id });
         ctx.stop();
         Running::Stop
+    }
+}
+
+pub trait Sender<T> {
+    fn send_proto(&mut self, val: T) -> Result<()>;
+}
+
+impl Sender<ServerToClient> for <Client as Actor>::Context {
+    fn send_proto(&mut self, val: ServerToClient) -> Result<()> {
+        let mut vec = Vec::new();
+        val.write_to_vec(&mut vec)?;
+        println!("Sending {} bytes:", vec.len());
+        println!("{:?}", val);
+        println!("{:?}", vec);
+        self.binary(vec);
+        Ok(())
+    }
+}
+
+impl Sender<Error> for <Client as Actor>::Context {
+    fn send_proto(&mut self, val: Error) -> Result<()> {
+        let mut msg = ServerToClient::default();
+        msg.set_error(val);
+        self.send_proto(msg)
+    }
+}
+
+impl Sender<AuthenticateResponse> for <Client as Actor>::Context {
+    fn send_proto(&mut self, val: AuthenticateResponse) -> Result<()> {
+        let mut msg = ServerToClient::default();
+        msg.set_authenticate(val);
+        self.send_proto(msg)
+    }
+}
+
+impl Sender<LoadInboxResponse> for <Client as Actor>::Context {
+    fn send_proto(&mut self, val: LoadInboxResponse) -> Result<()> {
+        let mut msg = ServerToClient::default();
+        msg.set_inbox(val);
+        self.send_proto(msg)
     }
 }
 
@@ -83,8 +129,10 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
         match msg {
             ws::Message::Ping(msg) => ctx.pong(&msg),
             ws::Message::Text(text) => {
-                println!("Got TEXT from client, ignoring");
-                println!("{}", text);
+                if !text.is_empty() {
+                    println!("Got TEXT from client, ignoring");
+                    println!("{}", text);
+                }
             }
             ws::Message::Binary(mut bin) => {
                 println!("Received {:?} bytes", bin.len());
@@ -94,6 +142,7 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                 let mut result = ::proto::ClientToServer::new();
                 match result.merge_from(&mut input) {
                     Ok(()) => {
+                        println!("{:?}", result);
                         let message = match result.message {
                             Some(m) => m,
                             None => {
@@ -106,18 +155,22 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                                 MessageHandler.handle(self, ctx, auth)
                             }
                             ::proto::ClientToServer_oneof_message::load_inbox(load_inbox) => {
-                                Err(format_err!("Got load_inbox: {:?}", load_inbox))
+                                MessageHandler.handle(self, ctx, load_inbox)
                             }
                             ::proto::ClientToServer_oneof_message::load_email(load_email) => {
                                 Err(format_err!("Got load_email: {:?}", load_email))
                             }
                             ::proto::ClientToServer_oneof_message::load_attachment(
                                 load_attachment,
-                            ) => {
-                                Err(format_err!("Got load_attachment: {:?}", load_attachment))
-                            }
+                            ) => Err(format_err!("Got load_attachment: {:?}", load_attachment)),
                         };
-                        println!("{:?}", result);
+                        if let Err(e) = result {
+                            let _ = ctx.send_proto({
+                                let mut error = Error::default();
+                                error.error = format!("{:?}", e);
+                                error
+                            });
+                        }
                     }
                     Err(e) => println!("Could not receive binary blob from client: {:?}", e),
                 }
@@ -137,8 +190,7 @@ impl Handler<NewEmail> for Client {
             context.text(
                 serde_json::to_string(&EmailReceived {
                     email_received: msg.0,
-                })
-                .unwrap(),
+                }).unwrap(),
             );
         }
     }
