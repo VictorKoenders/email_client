@@ -7,7 +7,6 @@ extern crate dotenv;
 extern crate imap;
 extern crate mailparse;
 extern crate native_tls;
-extern crate protobuf;
 #[macro_use]
 extern crate failure;
 extern crate futures;
@@ -22,6 +21,7 @@ extern crate serde_json;
 extern crate uuid;
 #[macro_use]
 extern crate diesel;
+extern crate bincode;
 extern crate clap;
 extern crate html_sanitizer;
 extern crate lettre;
@@ -31,7 +31,6 @@ pub mod attachment;
 pub mod data;
 pub mod mail_reader;
 pub mod message;
-pub mod proto;
 pub mod web;
 
 use actix::ArbiterService;
