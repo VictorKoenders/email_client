@@ -1,3 +1,5 @@
+use crate::inbox::InboxHeader;
+
 #[derive(Serialize, Deserialize)]
 pub struct LoginRequest {
     pub username: String,
@@ -6,6 +8,6 @@ pub struct LoginRequest {
 
 #[derive(Serialize, Deserialize)]
 pub enum LoginResponse {
-    Success,
+    Success { inboxes: Vec<InboxHeader> },
     LoginFailed,
 }

@@ -16,6 +16,7 @@ pub enum ServerToClient {
     LoadInboxResponse(Box<Inbox>),
     LoadEmailResponse(Box<Email>),
     LoadAttachmentResponse(Box<Attachment>),
+    NewEmail(Box<Email>),
 }
 
 impl ServerToClient {

@@ -2,7 +2,7 @@ use crate::attachment::AttachmentHeader;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct EmailHeader {
     pub id: Uuid,
     pub inbox_id: Uuid,
