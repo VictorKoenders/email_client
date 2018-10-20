@@ -1,9 +1,9 @@
 use super::models::email::{Email, EmailInfo};
 use super::models::inbox::InboxWithAddress;
 use actix::dev::Message;
+use crate::Result;
 use shared::attachment::Attachment;
 use uuid::Uuid;
-use Result;
 
 #[derive(Debug)]
 pub struct ListAddresses;

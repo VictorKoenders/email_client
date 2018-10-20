@@ -1,10 +1,10 @@
-use data::schema::{email, inbox, inbox_address};
+use crate::data::schema::{email, inbox, inbox_address};
+use crate::Result;
 use diesel::dsl::count_star;
 use diesel::dsl::exists;
 use diesel::pg::PgConnection;
 use diesel::{BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
-use Result;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[deprecated(note = "Use shared::inbox::Inbox instead")]

@@ -2,30 +2,12 @@
 
 #[macro_use]
 extern crate actix;
-extern crate actix_web;
-extern crate dotenv;
-extern crate imap;
-extern crate mailparse;
-extern crate native_tls;
 #[macro_use]
 extern crate failure;
-extern crate futures;
-extern crate lazy_static;
 #[macro_use]
 extern crate serde_derive;
-extern crate chrono;
-extern crate r2d2;
-extern crate r2d2_diesel;
-extern crate serde;
-extern crate serde_json;
-extern crate uuid;
 #[macro_use]
 extern crate diesel;
-extern crate clap;
-extern crate html_sanitizer;
-extern crate lettre;
-extern crate lettre_email;
-extern crate shared;
 
 pub mod attachment;
 pub mod data;
