@@ -2,41 +2,46 @@ use super::Loadable;
 use data::schema::email_attachment_header;
 use diesel::pg::PgConnection;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use std::collections::HashMap;
+use shared::attachment::Header;
 use uuid::Uuid;
 use Result;
 
 #[derive(Queryable)]
-pub struct AttachmentHeader {
+pub struct HeaderLoader {
     pub key: String,
     pub value: String,
 }
-impl AttachmentHeader {
-    pub fn load_by_attachment(
-        connection: &PgConnection,
-        id: &Uuid,
-    ) -> Result<HashMap<String, String>> {
-        let result: Vec<AttachmentHeader> = email_attachment_header::table
+
+impl Into<Header> for HeaderLoader {
+    fn into(self) -> Header {
+        Header {
+            key: self.key,
+            value: self.value,
+        }
+    }
+}
+
+impl<'a> Loadable<'a, Uuid> for Vec<Header> {
+    fn load(connection: &PgConnection, id: Uuid) -> Result<Vec<Header>> {
+        let result: Vec<HeaderLoader> = email_attachment_header::table
             .select((
                 email_attachment_header::dsl::key,
                 email_attachment_header::dsl::value,
             ))
             .filter(email_attachment_header::dsl::email_attachment_id.eq(id))
             .get_results(connection)?;
-
-        let mut map = HashMap::with_capacity(result.len());
-        for header in result {
-            map.insert(header.key, header.value);
-        }
-        Ok(map)
+        Ok(result.into_iter().map(Into::into).collect())
     }
+}
+
+impl HeaderLoader {
     pub fn save<'a>(
         connection: &'a PgConnection,
         email_attachment_id: &'a Uuid,
         headers: impl Iterator<Item = (&'a String, &'a String)>,
     ) -> Result<()> {
         for (key, value) in headers {
-            let insert = AttachmentHeaderInsert {
+            let insert = HeaderInsert {
                 email_attachment_id,
                 key,
                 value,
@@ -51,7 +56,7 @@ impl AttachmentHeader {
 
 #[derive(Insertable)]
 #[table_name = "email_attachment_header"]
-struct AttachmentHeaderInsert<'a> {
+struct HeaderInsert<'a> {
     email_attachment_id: &'a Uuid,
     key: &'a str,
     value: &'a str,

@@ -2,7 +2,6 @@ use data::schema::{email, inbox, inbox_address};
 use diesel::dsl::count_star;
 use diesel::dsl::exists;
 use diesel::pg::PgConnection;
-// use diesel::sql_types::{Nullable, BigInt, Text, Uuid as UuidType};
 use diesel::{BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 use Result;

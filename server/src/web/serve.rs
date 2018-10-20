@@ -3,7 +3,6 @@ use actix_web::fs::NamedFile;
 use actix_web::http::StatusCode;
 use actix_web::{HttpRequest, HttpResponse, Responder};
 use data::messages::LoadAttachment;
-use data::models::email_attachment::AttachmentInfo;
 use futures::{future, Future};
 use uuid::Uuid;
 
@@ -36,26 +35,24 @@ pub fn download_attachment(
         }
     };
 
-    Box::new(
-        req.state()
-            .database
-            .send(LoadAttachment(AttachmentInfo::from_id(id)))
-            .then(|res| match res {
-                Ok(Ok(res)) => future::ok(
-                    HttpResponse::Ok()
-                        .header("Content-Type", res.attachment.mime_type)
-                        .header("Content-Transfer-Encoding", "Binary")
-                        .header(
-                            "Content-disposition",
-                            format!(
-                                "attachment; filename={:?}",
-                                res.attachment
-                                    .name
-                                    .unwrap_or_else(|| String::from("unknown"))
-                            ),
-                        ).body(res.attachment.contents),
-                ),
-                x => future::ok(HttpResponse::InternalServerError().body(format!("{:?}", x))),
-            }),
-    )
+    Box::new(req.state().database.send(LoadAttachment(id)).then(|res| {
+        match res {
+            Ok(Ok(res)) => future::ok(
+                HttpResponse::Ok()
+                    .header("Content-Type", res.attachment.mime_type)
+                    .header("Content-Transfer-Encoding", "Binary")
+                    .header(
+                        "Content-disposition",
+                        format!(
+                            "attachment; filename={:?}",
+                            res.attachment
+                                .name
+                                .unwrap_or_else(|| String::from("unknown"))
+                        ),
+                    )
+                    .body(res.attachment.contents),
+            ),
+            x => future::ok(HttpResponse::InternalServerError().body(format!("{:?}", x))),
+        }
+    }))
 }

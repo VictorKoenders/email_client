@@ -1,10 +1,13 @@
-use super::email_attachment::{Attachment, AttachmentInfo};
+use super::email_attachment::AttachmentLoader;
 use super::email_header::EmailHeaders;
 use super::inbox::Inbox;
+use super::Loadable;
 use data::schema::email;
 use diesel::pg::PgConnection;
 use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
 use message::Message as ImapMessage;
+use shared::attachment::AttachmentHeader;
+use shared::email::EmailHeader;
 use uuid::Uuid;
 use Result;
 
@@ -19,21 +22,28 @@ pub struct EmailInfo {
     pub read: bool,
 }
 
-/*
-impl Into<::proto::email::EmailHeader> for EmailInfo {
-    fn into(self) -> ::proto::email::EmailHeader {
-        let mut header = ::proto::email::EmailHeader::default();
+#[derive(Queryable)]
+pub struct EmailResult {
+    pub id: Uuid,
+    pub inbox_id: Uuid,
+    pub from: Option<String>,
+    pub to: Option<String>,
+    pub subject: Option<String>,
+    pub read: bool,
+}
 
-        header.id = self.id.to_string();
-        header.from = self.from.unwrap_or_default();
-        header.to = self.to.unwrap_or_default();
-        header.subject = self.subject.unwrap_or_default();
-        header.read = self.read;
-
-        header
+impl Into<EmailHeader> for EmailResult {
+    fn into(self) -> EmailHeader {
+        EmailHeader {
+            id: self.id,
+            inbox_id: self.inbox_id,
+            from: self.from.unwrap_or_else(String::new),
+            to: self.to.unwrap_or_else(String::new),
+            subject: self.subject.unwrap_or_else(String::new),
+            read: self.read,
+        }
     }
 }
-*/
 
 impl EmailInfo {
     pub fn load_by_inbox(connection: &PgConnection, uuid: &Uuid) -> Result<Vec<EmailInfo>> {
@@ -74,7 +84,7 @@ pub struct EmptyEmailFromImap<'a> {
 }
 
 impl<'a> EmailFromImap<'a> {
-    pub fn save(connection: &PgConnection, message: &ImapMessage) -> Result<EmailInfo> {
+    pub fn save(connection: &PgConnection, message: &ImapMessage) -> Result<EmailHeader> {
         connection.transaction(|| {
             let inbox = Inbox::try_load_by_address(connection, &message.to)?;
             let email = EmailFromImap {
@@ -88,7 +98,7 @@ impl<'a> EmailFromImap<'a> {
                 html_body_raw: message.html_body_raw.as_ref().map(|s| s.as_str()),
                 raw: &message.raw,
             };
-            let result: EmailInfo = ::diesel::insert_into(email::table)
+            let result: EmailResult = ::diesel::insert_into(email::table)
                 .values(&email)
                 .returning((
                     email::dsl::id,
@@ -102,10 +112,10 @@ impl<'a> EmailFromImap<'a> {
 
             EmailHeaders::save(connection, &result.id, message.headers.iter())?;
             for attachment in &message.attachments {
-                Attachment::save(connection, &result.id, attachment)?;
+                AttachmentLoader::save(connection, &result.id, attachment)?;
             }
 
-            Ok(result)
+            Ok(result.into())
         })
     }
     pub fn save_empty(connection: &PgConnection, message: &ImapMessage) -> Result<()> {
@@ -120,8 +130,8 @@ impl<'a> EmailFromImap<'a> {
     }
 }
 
-#[deprecated(note = "Use shared::email::EmailResponse instead")]
-#[derive(Debug, Serialize)]
+#[deprecated(note = "Use shared::email::Email instead")]
+#[derive(Serialize)]
 pub struct Email {
     pub id: Uuid,
     pub inbox_id: Uuid,
@@ -134,7 +144,7 @@ pub struct Email {
     pub html_body: Option<String>,
 
     pub headers: EmailHeaders,
-    pub attachments: Vec<AttachmentInfo>,
+    pub attachments: Vec<AttachmentHeader>,
 }
 
 #[derive(Queryable)]
@@ -151,7 +161,7 @@ struct EmailLoadByIDResult {
 }
 
 impl Email {
-    pub fn load_by_id(connection: &PgConnection, id: &Uuid) -> Result<Email> {
+    pub fn load_by_id(connection: &PgConnection, id: Uuid) -> Result<Email> {
         let email: EmailLoadByIDResult = email::table
             .find(id)
             .select((
@@ -174,7 +184,7 @@ impl Email {
         }
 
         let headers = EmailHeaders::load_by_email(connection, &email.id)?;
-        let attachments = AttachmentInfo::load_by_email(connection, &email.id)?;
+        let attachments = Loadable::load(connection, id)?;
 
         Ok(Email {
             id: email.id,

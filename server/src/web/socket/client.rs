@@ -1,4 +1,4 @@
-use super::message::{Connect, Disconnect, EmailReceived};
+use super::message::{Connect, Disconnect};
 
 use actix::{
     fut, Actor, ActorContext, ActorFuture, AsyncContext, ContextFutureSpawner, Handler, Running,
@@ -184,14 +184,9 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
 
 impl Handler<NewEmail> for Client {
     type Result = ();
-    fn handle(&mut self, msg: NewEmail, context: &mut Self::Context) {
+    fn handle(&mut self, _msg: NewEmail, _context: &mut Self::Context) {
         if self.authenticated {
-            context.text(
-                serde_json::to_string(&EmailReceived {
-                    email_received: msg.0,
-                })
-                .unwrap(),
-            );
+            // TODO: Implement
         }
     }
 }

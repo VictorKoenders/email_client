@@ -1,6 +1,6 @@
 use super::models::email::{Email, EmailFromImap, EmailInfo};
-use super::models::email_attachment::Attachment;
 use super::models::inbox::InboxWithAddress;
+use super::models::Loadable;
 use super::{
     ListAddressResult, ListAddresses, LoadAttachment, LoadAttachmentResponse, LoadEmail,
     LoadEmailResponse, LoadInbox, LoadInboxResponse,
@@ -10,6 +10,8 @@ use diesel::PgConnection;
 use mail_reader::ImapMessage;
 use r2d2::Pool;
 use r2d2_diesel::ConnectionManager;
+use shared::attachment::Attachment;
+use shared::email::EmailHeader;
 use std::env;
 use Result;
 
@@ -65,7 +67,7 @@ impl Handler<AddNewEmailListener> for Database {
 }
 
 #[derive(Message, Clone)]
-pub struct NewEmail(pub EmailInfo);
+pub struct NewEmail(pub EmailHeader);
 
 impl Actor for Database {
     type Context = Context<Self>;
@@ -121,7 +123,7 @@ impl Handler<LoadEmail> for Database {
 
     fn handle(&mut self, msg: LoadEmail, _ctx: &mut Self::Context) -> Result<LoadEmailResponse> {
         let connection = self.pool.get()?;
-        let email = Email::load_by_id(&connection, &msg.0.id)?;
+        let email = Email::load_by_id(&connection, msg.0.id)?;
         Ok(LoadEmailResponse { email })
     }
 }
@@ -148,7 +150,7 @@ impl Handler<LoadAttachment> for Database {
         _ctx: &mut Self::Context,
     ) -> Result<LoadAttachmentResponse> {
         let connection = self.pool.get()?;
-        let attachment = Attachment::load_by_id(&connection, &msg.0.id)?;
+        let attachment = Attachment::load(&connection, msg.0)?;
         Ok(LoadAttachmentResponse { attachment })
     }
 }

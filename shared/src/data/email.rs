@@ -1,5 +1,4 @@
 use crate::attachment::AttachmentHeader;
-use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -28,6 +27,12 @@ pub struct Email {
     pub imap_index: i32,
     pub text_plain_body: String,
     pub html_body: String,
-    pub headers: HashMap<String, String>,
+    pub headers: Vec<Header>,
     pub attachments: Vec<AttachmentHeader>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Header {
+    pub key: String,
+    pub value: String,
 }
