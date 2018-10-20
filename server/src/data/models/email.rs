@@ -18,6 +18,7 @@ pub struct EmailInfo {
     pub read: bool,
 }
 
+/*
 impl Into<::proto::email::EmailHeader> for EmailInfo {
     fn into(self) -> ::proto::email::EmailHeader {
         let mut header = ::proto::email::EmailHeader::default();
@@ -31,6 +32,7 @@ impl Into<::proto::email::EmailHeader> for EmailInfo {
         header
     }
 }
+*/
 
 impl EmailInfo {
     pub fn load_by_inbox(connection: &PgConnection, uuid: &Uuid) -> Result<Vec<EmailInfo>> {
@@ -42,7 +44,8 @@ impl EmailInfo {
                 email::dsl::to,
                 email::dsl::subject,
                 email::dsl::read,
-            )).filter(email::inbox_id.eq(uuid))
+            ))
+            .filter(email::inbox_id.eq(uuid))
             .order_by(email::dsl::created_on.desc());
         query.get_results(connection).map_err(Into::into)
     }
@@ -93,7 +96,8 @@ impl<'a> EmailFromImap<'a> {
                     email::dsl::to,
                     email::dsl::subject,
                     email::dsl::read,
-                )).get_result(connection)?;
+                ))
+                .get_result(connection)?;
 
             EmailHeaders::save(connection, &result.id, message.headers.iter())?;
             for attachment in &message.attachments {
@@ -158,7 +162,8 @@ impl Email {
                 email::imap_index,
                 email::text_plain_body,
                 email::html_body,
-            )).get_result(connection)?;
+            ))
+            .get_result(connection)?;
 
         if !email.read {
             ::diesel::update(email::table.find(id))

@@ -40,7 +40,7 @@ impl Handler<Connect> for Server {
 
 impl Handler<Disconnect> for Server {
     type Result = ();
-    fn handle(&mut self, msg: Disconnect, _ctx: &mut Context<Self>) -> () {
+    fn handle(&mut self, msg: Disconnect, _ctx: &mut Context<Self>) {
         self.clients.remove(&msg.id);
     }
 }

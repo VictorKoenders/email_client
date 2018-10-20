@@ -1,17 +1,11 @@
-use super::message::{
-    Connect, Disconnect, EmailReceived, Handler as MessageHandler,
-    MessageHandler as _MessageHandler,
-};
+use super::message::{Connect, Disconnect, EmailReceived};
+
 use actix::{
     fut, Actor, ActorContext, ActorFuture, AsyncContext, ContextFutureSpawner, Handler, Running,
     StreamHandler, WrapFuture,
 };
 use actix_web::ws;
 use data::NewEmail;
-use proto::authenticate::AuthenticateResponse;
-use proto::inbox::LoadInboxResponse;
-use proto::{Error, ServerToClient};
-use protobuf::Message;
 use serde::Serialize;
 use serde_json;
 use std::net::SocketAddr;
@@ -55,14 +49,16 @@ impl Actor for Client {
             .send(Connect {
                 client_addr,
                 remote_addr,
-            }).into_actor(self)
+            })
+            .into_actor(self)
             .then(|res, act, ctx| {
                 match res {
                     Ok(id) => act.id = id,
                     _ => ctx.stop(),
                 }
                 fut::ok(())
-            }).wait(ctx);
+            })
+            .wait(ctx);
     }
     fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
         ctx.state()
@@ -77,6 +73,7 @@ pub trait Sender<T> {
     fn send_proto(&mut self, val: T) -> Result<()>;
 }
 
+/*
 impl Sender<ServerToClient> for <Client as Actor>::Context {
     fn send_proto(&mut self, val: ServerToClient) -> Result<()> {
         let mut vec = Vec::new();
@@ -112,6 +109,7 @@ impl Sender<LoadInboxResponse> for <Client as Actor>::Context {
         self.send_proto(msg)
     }
 }
+*/
 
 pub trait ContextSender {
     #[deprecated(note = "Switch to protobuf")]
@@ -134,9 +132,9 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                     println!("{}", text);
                 }
             }
-            ws::Message::Binary(mut bin) => {
+            ws::Message::Binary(bin) => {
                 println!("Received {:?} bytes", bin.len());
-                let mut reader = ::std::io::Cursor::new(bin.take());
+                /*let mut reader = ::std::io::Cursor::new(bin.take());
                 let mut input = ::protobuf::CodedInputStream::new(&mut reader);
                 use protobuf::Message;
                 let mut result = ::proto::ClientToServer::new();
@@ -174,6 +172,7 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                     }
                     Err(e) => println!("Could not receive binary blob from client: {:?}", e),
                 }
+                */
             }
             ws::Message::Pong(_msg) => {}
             ws::Message::Close(_msg) => {
@@ -190,7 +189,8 @@ impl Handler<NewEmail> for Client {
             context.text(
                 serde_json::to_string(&EmailReceived {
                     email_received: msg.0,
-                }).unwrap(),
+                })
+                .unwrap(),
             );
         }
     }

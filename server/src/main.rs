@@ -21,11 +21,11 @@ extern crate serde_json;
 extern crate uuid;
 #[macro_use]
 extern crate diesel;
-extern crate bincode;
 extern crate clap;
 extern crate html_sanitizer;
 extern crate lettre;
 extern crate lettre_email;
+extern crate shared;
 
 pub mod attachment;
 pub mod data;

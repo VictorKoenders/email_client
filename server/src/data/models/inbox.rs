@@ -15,6 +15,7 @@ pub struct InboxWithAddress {
     pub unread_count: i32,
 }
 
+/*
 impl Into<::proto::inbox::InboxHeader> for InboxWithAddress {
     fn into(self) -> ::proto::inbox::InboxHeader {
         let mut header = ::proto::inbox::InboxHeader::default();
@@ -24,6 +25,7 @@ impl Into<::proto::inbox::InboxHeader> for InboxWithAddress {
         header
     }
 }
+*/
 
 #[derive(Queryable)] //, QueryableByName)]
 pub struct InboxWithUnread {
@@ -47,7 +49,8 @@ impl InboxWithAddress {
                     email::dsl::inbox_id
                         .eq(inbox::dsl::id)
                         .and(email::dsl::read.eq(false)),
-                ).select(count_star())
+                )
+                .select(count_star())
                 .single_value(),
         ));
         let inboxes: Vec<InboxWithUnread> = query.get_results(connection)?;
@@ -63,11 +66,13 @@ impl InboxWithAddress {
                         } else {
                             None
                         }
-                    }).collect(),
+                    })
+                    .collect(),
                 id: inbox.id,
                 name: inbox.name,
                 unread_count: inbox.unread_count.unwrap_or(0) as i32,
-            }).collect())
+            })
+            .collect())
     }
 
     pub fn load_by_id(connection: &PgConnection, id: &Uuid) -> Result<InboxWithAddress> {
@@ -80,9 +85,11 @@ impl InboxWithAddress {
                         email::dsl::inbox_id
                             .eq(inbox::dsl::id)
                             .and(email::dsl::read.eq(false)),
-                    ).select(count_star())
+                    )
+                    .select(count_star())
                     .single_value(),
-            )).find(id);
+            ))
+            .find(id);
         let inbox: InboxWithUnread = query.get_result(connection)?;
         /*::diesel::sql_query(
             "SELECT id, name, (SELECT COUNT(*) FROM email WHERE email.inbox_id == inbox.id AND email.read = false) AS unread_count FROM inbox WHERE id = $1"

@@ -1,8 +1,9 @@
+/*
 use super::{Handler, MessageHandler};
 use actix::{fut, Actor, ActorContext, ActorFuture, ContextFutureSpawner, WrapFuture};
 use data::messages::ListAddresses;
-use proto::authenticate::{AuthenticateRequest, AuthenticateResponse};
-use proto::inbox::InboxHeader;
+// use proto::authenticate::{AuthenticateRequest, AuthenticateResponse};
+// use proto::inbox::InboxHeader;
 use std::env;
 use web::socket::client::{Client, Sender};
 use Result;
@@ -64,3 +65,4 @@ impl MessageHandler<AuthenticateRequest> for Handler {
         Ok(())
     }
 }
+*/

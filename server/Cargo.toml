@@ -5,7 +5,7 @@ version = "0.1.0"
 
 [dependencies]
 actix = "0.7.5"
-actix-web = "0.7.12"
+actix-web = "0.7.13"
 clap = "2.32.0"
 dotenv = "0.13.0"
 failure = "0.1.2"
@@ -16,13 +16,13 @@ native-tls = "0.1.5" # dependant on imap
 mailparse = "0.6.4"
 r2d2 = "0.8.2"
 r2d2-diesel = "1.0.0"
-serde = "1.0.79"
-serde_derive = "1.0.79"
+serde = "1.0.80"
+serde_derive = "1.0.80"
 serde_json = "1.0.32"
 lettre = "0.8"
 lettre_email = "0.8"
 lazy_static = "1.1.0"
-protobuf = "2.1.1"
+shared = { path = "../shared" }
 
 [dependencies.chrono]
 features = ["serde"]

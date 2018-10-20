@@ -1,7 +1,8 @@
+/*
 use super::{Handler, MessageHandler};
 use actix::{fut, Actor, ActorContext, ActorFuture, ContextFutureSpawner, WrapFuture};
 use data::messages::LoadInbox;
-use proto::inbox::{LoadInboxRequest, LoadInboxResponse};
+// use proto::inbox::{LoadInboxRequest, LoadInboxResponse};
 use std::str::FromStr;
 use uuid::Uuid;
 use web::socket::client::{Client, Sender};
@@ -35,3 +36,4 @@ impl MessageHandler<LoadInboxRequest> for Handler {
         Ok(())
     }
 }
+*/

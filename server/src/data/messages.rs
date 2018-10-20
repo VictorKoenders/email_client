@@ -24,6 +24,7 @@ pub struct LoadInboxResponse {
     pub emails: Vec<EmailInfo>,
 }
 
+/*
 impl Into<::proto::inbox::LoadInboxResponse> for LoadInboxResponse {
     fn into(self) -> ::proto::inbox::LoadInboxResponse {
         let mut response = ::proto::inbox::LoadInboxResponse::default();
@@ -36,6 +37,7 @@ impl Into<::proto::inbox::LoadInboxResponse> for LoadInboxResponse {
         response
     }
 }
+*/
 
 impl Message for LoadInbox {
     type Result = Result<LoadInboxResponse>;
