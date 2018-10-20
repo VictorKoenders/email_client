@@ -1,5 +1,8 @@
 use bincode;
-use crate::LoginRequest;
+use crate::attachment::LoadAttachmentRequest;
+use crate::email::LoadEmailRequest;
+use crate::inbox::LoadInboxRequest;
+use crate::login::LoginRequest;
 use failure::{Error, ResultExt};
 use std::io::Write;
 
@@ -8,7 +11,10 @@ pub const CLIENT_TO_SERVER_VERSION: ClientToServer = ClientToServer::Version(1);
 #[derive(Serialize, Deserialize)]
 pub enum ClientToServer {
     Version(u32),
-    Authenticate(LoginRequest),
+    Authenticate(Box<LoginRequest>),
+    LoadInbox(Box<LoadInboxRequest>),
+    LoadEmail(Box<LoadEmailRequest>),
+    LoadAttachment(Box<LoadAttachmentRequest>),
 }
 
 impl ClientToServer {

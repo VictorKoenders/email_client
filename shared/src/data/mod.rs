@@ -1,3 +1,4 @@
-mod login;
-
-pub use self::login::*;
+pub mod attachment;
+pub mod email;
+pub mod inbox;
+pub mod login;
