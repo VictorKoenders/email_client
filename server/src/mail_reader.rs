@@ -1,11 +1,11 @@
 use actix::{Actor, ArbiterService, AsyncContext, Context, Handler, Recipient, Supervised};
+use crate::message::Message;
+use crate::Result;
 use failure::ResultExt;
-use message::Message;
 use native_tls::TlsConnector;
 use std::env;
 use std::str;
 use std::time::Duration;
-use Result;
 
 pub type Client = ::imap::client::Client<::native_tls::TlsStream<::std::net::TcpStream>>;
 

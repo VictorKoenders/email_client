@@ -1,15 +1,15 @@
-use attachment::Attachment;
+use crate::attachment::Attachment;
+use crate::mail_reader::Client;
+use crate::Result;
 use failure::ResultExt;
 use lettre::smtp::authentication::{Credentials, Mechanism};
 use lettre::smtp::extension::ClientId;
 use lettre::smtp::SmtpTransportBuilder;
 use lettre::{ClientSecurity, EmailTransport};
 use lettre_email::EmailBuilder;
-use mail_reader::Client;
 use mailparse::{parse_mail, ParsedMail};
 use std::collections::HashMap;
 use std::env;
-use Result;
 
 #[derive(Clone, Debug, Serialize, Default)]
 pub struct Message {
@@ -165,13 +165,13 @@ pub struct Outgoing {
 impl Outgoing {
     pub fn send(self) -> Result<()> {
         let email = EmailBuilder::new()
-        .to((self.to_email, self.to_alias))
-        // ... or by an address only
-        .from((self.from_email, self.from_alias))
-        .subject(self.subject)
-        .text(self.body)
-        .build()
-        .unwrap();
+            .to((self.to_email, self.to_alias))
+            // ... or by an address only
+            .from((self.from_email, self.from_alias))
+            .subject(self.subject)
+            .text(self.body)
+            .build()
+            .unwrap();
 
         let host = env::var("SMTP_DOMAIN").expect("Missing environment variable SMTP_DOMAIN");
         let port: u16 = env::var("SMTP_PORT")

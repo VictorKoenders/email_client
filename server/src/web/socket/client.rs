@@ -5,13 +5,13 @@ use actix::{
     StreamHandler, WrapFuture,
 };
 use actix_web::ws;
-use data::NewEmail;
+use crate::data::NewEmail;
+use crate::web::State as ServerState;
+use crate::Result;
 use serde::Serialize;
 use serde_json;
 use std::net::SocketAddr;
 use std::str::FromStr;
-use web::State as ServerState;
-use Result;
 
 #[derive(Default)]
 pub struct Client {

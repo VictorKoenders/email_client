@@ -1,10 +1,10 @@
 use super::Loadable;
-use data::schema::email_attachment_header;
+use crate::data::schema::email_attachment_header;
+use crate::Result;
 use diesel::pg::PgConnection;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use shared::attachment::Header;
 use uuid::Uuid;
-use Result;
 
 #[derive(Queryable)]
 pub struct HeaderLoader {

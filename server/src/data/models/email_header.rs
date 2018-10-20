@@ -1,11 +1,11 @@
-use data::schema::email_header;
+use crate::data::schema::email_header;
+use crate::Result;
 use diesel::pg::PgConnection;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use serde::ser::{Serialize, Serializer};
 use std::collections::HashMap;
 use std::fmt;
 use uuid::Uuid;
-use Result;
 
 pub struct EmailHeaders(HashMap<String, String>);
 

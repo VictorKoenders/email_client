@@ -2,7 +2,7 @@ use super::State;
 use actix_web::fs::NamedFile;
 use actix_web::http::StatusCode;
 use actix_web::{HttpRequest, HttpResponse, Responder};
-use data::messages::LoadAttachment;
+use crate::data::messages::LoadAttachment;
 use futures::{future, Future};
 use uuid::Uuid;
 

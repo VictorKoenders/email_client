@@ -1,7 +1,7 @@
+use super::Client;
 use actix::{Actor, Addr};
+use crate::Result;
 use std::net::SocketAddr;
-use web::socket::client::Client;
-use Result;
 
 mod authentication;
 // mod load_attachment;

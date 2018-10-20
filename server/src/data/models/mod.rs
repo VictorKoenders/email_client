@@ -1,5 +1,5 @@
+use crate::Result;
 use diesel::pg::PgConnection;
-use Result;
 
 pub mod email;
 pub mod email_attachment;

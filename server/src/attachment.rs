@@ -1,6 +1,6 @@
+use crate::Result;
 use mailparse::ParsedMail;
 use std::collections::HashMap;
-use Result;
 
 #[derive(Clone, Debug, Serialize, Default)]
 pub struct Attachment {

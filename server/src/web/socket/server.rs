@@ -1,7 +1,7 @@
 use super::message::{Connect, Disconnect};
 use super::Client;
 use actix::{Actor, Addr, ArbiterService, Context, Handler, Supervised};
-use data::NewEmail;
+use crate::data::NewEmail;
 use std::collections::HashMap;
 
 #[derive(Default)]

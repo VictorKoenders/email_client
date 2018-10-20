@@ -1,9 +1,5 @@
-extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate bincode;
-extern crate failure;
-extern crate uuid;
 
 mod client_to_server;
 mod data;

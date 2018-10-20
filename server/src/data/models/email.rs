@@ -2,14 +2,14 @@ use super::email_attachment::AttachmentLoader;
 use super::email_header::EmailHeaders;
 use super::inbox::Inbox;
 use super::Loadable;
-use data::schema::email;
+use crate::data::schema::email;
+use crate::message::Message as ImapMessage;
+use crate::Result;
 use diesel::pg::PgConnection;
 use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
-use message::Message as ImapMessage;
 use shared::attachment::AttachmentHeader;
 use shared::email::EmailHeader;
 use uuid::Uuid;
-use Result;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Queryable)]
 #[deprecated(note = "Use shared::email::EmailHeader instead")]

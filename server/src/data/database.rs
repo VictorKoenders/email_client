@@ -6,14 +6,14 @@ use super::{
     LoadEmailResponse, LoadInbox, LoadInboxResponse,
 };
 use actix::{Actor, ArbiterService, Context, Handler, Recipient, Supervised};
+use crate::mail_reader::ImapMessage;
+use crate::Result;
 use diesel::PgConnection;
-use mail_reader::ImapMessage;
 use r2d2::Pool;
 use r2d2_diesel::ConnectionManager;
 use shared::attachment::Attachment;
 use shared::email::EmailHeader;
 use std::env;
-use Result;
 
 pub struct Database {
     pool: Pool<ConnectionManager<PgConnection>>,

@@ -1,12 +1,12 @@
 use super::email_attachment_header::HeaderLoader;
 use super::Loadable;
-use attachment::Attachment as ImapAttachment;
-use data::schema::email_attachment;
+use crate::attachment::Attachment as ImapAttachment;
+use crate::data::schema::email_attachment;
+use crate::Result;
 use diesel::pg::PgConnection;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use shared::attachment::{Attachment, AttachmentHeader};
 use uuid::Uuid;
-use Result;
 
 #[derive(Queryable)]
 struct AttachmentInfo {
