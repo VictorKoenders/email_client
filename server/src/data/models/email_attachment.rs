@@ -8,6 +8,7 @@ use uuid::Uuid;
 use Result;
 
 #[derive(Debug, Serialize, Deserialize, Queryable)]
+#[deprecated(note = "Use shared::attachment::AttachmentHeader instead")]
 pub struct AttachmentInfo {
     pub id: Uuid,
     pub mime_type: String,
@@ -35,13 +36,15 @@ impl AttachmentInfo {
                 email_attachment::dsl::mime_type,
                 email_attachment::dsl::name,
                 email_attachment::dsl::content_id,
-            )).filter(email_attachment::dsl::email_id.eq(email_id));
+            ))
+            .filter(email_attachment::dsl::email_id.eq(email_id));
 
         query.get_results(connection).map_err(Into::into)
     }
 }
 
 #[derive(Debug, Serialize)]
+#[deprecated(note = "Use shared::attachment::AttachmentResponse instead")]
 pub struct Attachment {
     pub id: Uuid,
     pub headers: HashMap<String, String>,
@@ -89,7 +92,8 @@ impl Attachment {
                 email_attachment::dsl::name,
                 email_attachment::dsl::content_id,
                 email_attachment::dsl::contents,
-            )).find(id)
+            ))
+            .find(id)
             .get_result(connection)?;
 
         let headers = AttachmentHeader::load_by_attachment(connection, id)?;

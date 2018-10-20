@@ -8,6 +8,7 @@ use uuid::Uuid;
 use Result;
 
 #[derive(Debug, Serialize, Deserialize)]
+#[deprecated(note = "Use shared::inbox::Inbox instead")]
 pub struct InboxWithAddress {
     pub id: Uuid,
     pub name: String,
@@ -28,6 +29,7 @@ impl Into<::proto::inbox::InboxHeader> for InboxWithAddress {
 */
 
 #[derive(Queryable)] //, QueryableByName)]
+#[deprecated(note = "Use shared::inbox::InboxHeader instead")]
 pub struct InboxWithUnread {
     // #[sql_type = "UuidType"]
     pub id: Uuid,

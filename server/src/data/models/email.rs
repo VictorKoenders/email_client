@@ -9,6 +9,7 @@ use uuid::Uuid;
 use Result;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Queryable)]
+#[deprecated(note = "Use shared::email::EmailHeader instead")]
 pub struct EmailInfo {
     pub id: Uuid,
     pub inbox_id: Uuid,
@@ -119,6 +120,7 @@ impl<'a> EmailFromImap<'a> {
     }
 }
 
+#[deprecated(note = "Use shared::email::EmailResponse instead")]
 #[derive(Debug, Serialize)]
 pub struct Email {
     pub id: Uuid,
