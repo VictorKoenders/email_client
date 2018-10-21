@@ -1,4 +1,4 @@
-use super::models::email::{Email, EmailFromImap, EmailInfo};
+use super::models::email::EmailFromImap;
 use super::models::inbox::InboxWithAddress;
 use super::models::Loadable;
 use super::{
@@ -12,7 +12,7 @@ use diesel::PgConnection;
 use r2d2::Pool;
 use r2d2_diesel::ConnectionManager;
 use shared::attachment::Attachment;
-use shared::email::EmailHeader;
+use shared::email::{Email, EmailHeader};
 use std::env;
 
 pub struct Database {
@@ -123,7 +123,7 @@ impl Handler<LoadEmail> for Database {
 
     fn handle(&mut self, msg: LoadEmail, _ctx: &mut Self::Context) -> Result<LoadEmailResponse> {
         let connection = self.pool.get()?;
-        let email = Email::load_by_id(&connection, msg.0.id)?;
+        let email = Email::load(&connection, msg.0)?;
         Ok(LoadEmailResponse { email })
     }
 }
@@ -133,7 +133,7 @@ impl Handler<LoadInbox> for Database {
     fn handle(&mut self, msg: LoadInbox, _ctx: &mut Self::Context) -> Result<LoadInboxResponse> {
         let connection = self.pool.get()?;
         let inbox_with_address = InboxWithAddress::load_by_id(&connection, &msg.0)?;
-        let emails = EmailInfo::load_by_inbox(&connection, &inbox_with_address.id)?;
+        let emails: Vec<EmailHeader> = Loadable::load(&connection, inbox_with_address.id)?;
         Ok(LoadInboxResponse {
             inbox_with_address,
             emails,

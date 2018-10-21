@@ -1,55 +1,39 @@
+use super::Loadable;
 use crate::data::schema::email_header;
 use crate::Result;
 use diesel::pg::PgConnection;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use serde::ser::{Serialize, Serializer};
-use std::collections::HashMap;
-use std::fmt;
+use shared::email::Header;
 use uuid::Uuid;
 
-pub struct EmailHeaders(HashMap<String, String>);
-
-impl fmt::Debug for EmailHeaders {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(fmt)
-    }
-}
-
-impl Serialize for EmailHeaders {
-    fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.0.serialize(serializer)
-    }
-}
-
-impl EmailHeaders {
-    pub fn load_by_email(connection: &PgConnection, email_id: &Uuid) -> Result<EmailHeaders> {
+impl<'a> Loadable<'a, Uuid> for Vec<Header> {
+    fn load(connection: &PgConnection, email_id: Uuid) -> Result<Vec<Header>> {
         let query = email_header::table
             .select((email_header::key, email_header::value))
             .filter(email_header::email_id.eq(email_id));
         let result: Vec<(String, String)> = query.get_results(connection)?;
-        Ok(EmailHeaders(result.into_iter().collect()))
+        Ok(result
+            .into_iter()
+            .map(|(key, value)| Header { key, value })
+            .collect())
     }
-
-    pub fn save<'a>(
-        connection: &'a PgConnection,
-        email_id: &'a Uuid,
-        headers: impl Iterator<Item = (&'a String, &'a String)>,
-    ) -> Result<()> {
-        for (key, value) in headers {
-            let insert = EmailHeaderInsert {
-                email_id,
-                key,
-                value,
-            };
-            ::diesel::insert_into(email_header::table)
-                .values(&insert)
-                .execute(connection)?;
-        }
-        Ok(())
+}
+pub fn save<'a>(
+    connection: &'a PgConnection,
+    email_id: &'a Uuid,
+    headers: impl Iterator<Item = (&'a String, &'a String)>,
+) -> Result<()> {
+    for (key, value) in headers {
+        let insert = EmailHeaderInsert {
+            email_id,
+            key,
+            value,
+        };
+        ::diesel::insert_into(email_header::table)
+            .values(&insert)
+            .execute(connection)?;
     }
+    Ok(())
 }
 
 #[derive(Insertable)]

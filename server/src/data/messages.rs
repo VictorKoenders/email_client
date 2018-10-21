@@ -1,8 +1,8 @@
-use super::models::email::{Email, EmailInfo};
 use super::models::inbox::InboxWithAddress;
 use actix::dev::Message;
 use crate::Result;
 use shared::attachment::Attachment;
+use shared::email::{Email, EmailHeader};
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -21,7 +21,7 @@ pub struct LoadInbox(pub Uuid);
 #[derive(Debug, Serialize)]
 pub struct LoadInboxResponse {
     pub inbox_with_address: InboxWithAddress,
-    pub emails: Vec<EmailInfo>,
+    pub emails: Vec<EmailHeader>,
 }
 
 impl Message for LoadInbox {
@@ -29,7 +29,7 @@ impl Message for LoadInbox {
 }
 
 #[derive(Debug)]
-pub struct LoadEmail(pub EmailInfo);
+pub struct LoadEmail(pub Uuid);
 
 #[derive(Serialize)]
 pub struct LoadEmailResponse {

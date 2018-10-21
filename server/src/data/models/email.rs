@@ -1,5 +1,5 @@
 use super::email_attachment::AttachmentLoader;
-use super::email_header::EmailHeaders;
+use super::email_header;
 use super::inbox::Inbox;
 use super::Loadable;
 use crate::data::schema::email;
@@ -7,19 +7,48 @@ use crate::message::Message as ImapMessage;
 use crate::Result;
 use diesel::pg::PgConnection;
 use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
-use shared::attachment::AttachmentHeader;
-use shared::email::EmailHeader;
+use shared::email::{Email, EmailHeader};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize, Clone, Queryable)]
-#[deprecated(note = "Use shared::email::EmailHeader instead")]
-pub struct EmailInfo {
+#[derive(Queryable)]
+pub struct EmailLoader {
     pub id: Uuid,
     pub inbox_id: Uuid,
     pub from: Option<String>,
     pub to: Option<String>,
     pub subject: Option<String>,
     pub read: bool,
+}
+
+impl Into<EmailHeader> for EmailLoader {
+    fn into(self) -> EmailHeader {
+        EmailHeader {
+            id: self.id,
+            inbox_id: self.inbox_id,
+            from: self.from,
+            to: self.to,
+            subject: self.subject,
+            read: self.read,
+        }
+    }
+}
+
+impl<'a> Loadable<'a, Uuid> for Vec<EmailHeader> {
+    fn load(connection: &PgConnection, id: Uuid) -> Result<Vec<EmailHeader>> {
+        let results: Vec<EmailLoader> = email::table
+            .select((
+                email::dsl::id,
+                email::dsl::inbox_id,
+                email::dsl::from,
+                email::dsl::to,
+                email::dsl::subject,
+                email::dsl::read,
+            ))
+            .filter(email::inbox_id.eq(id))
+            .order_by(email::dsl::created_on.desc())
+            .get_results(connection)?;
+        Ok(results.into_iter().map(Into::into).collect())
+    }
 }
 
 #[derive(Queryable)]
@@ -37,28 +66,11 @@ impl Into<EmailHeader> for EmailResult {
         EmailHeader {
             id: self.id,
             inbox_id: self.inbox_id,
-            from: self.from.unwrap_or_else(String::new),
-            to: self.to.unwrap_or_else(String::new),
-            subject: self.subject.unwrap_or_else(String::new),
+            from: self.from,
+            to: self.to,
+            subject: self.subject,
             read: self.read,
         }
-    }
-}
-
-impl EmailInfo {
-    pub fn load_by_inbox(connection: &PgConnection, uuid: &Uuid) -> Result<Vec<EmailInfo>> {
-        let query = email::table
-            .select((
-                email::dsl::id,
-                email::dsl::inbox_id,
-                email::dsl::from,
-                email::dsl::to,
-                email::dsl::subject,
-                email::dsl::read,
-            ))
-            .filter(email::inbox_id.eq(uuid))
-            .order_by(email::dsl::created_on.desc());
-        query.get_results(connection).map_err(Into::into)
     }
 }
 
@@ -110,7 +122,7 @@ impl<'a> EmailFromImap<'a> {
                 ))
                 .get_result(connection)?;
 
-            EmailHeaders::save(connection, &result.id, message.headers.iter())?;
+            email_header::save(connection, &result.id, message.headers.iter())?;
             for attachment in &message.attachments {
                 AttachmentLoader::save(connection, &result.id, attachment)?;
             }
@@ -130,23 +142,6 @@ impl<'a> EmailFromImap<'a> {
     }
 }
 
-#[deprecated(note = "Use shared::email::Email instead")]
-#[derive(Serialize)]
-pub struct Email {
-    pub id: Uuid,
-    pub inbox_id: Uuid,
-    pub from: Option<String>,
-    pub to: Option<String>,
-    pub subject: Option<String>,
-    pub read: bool,
-    pub imap_index: i32,
-    pub text_plain_body: Option<String>,
-    pub html_body: Option<String>,
-
-    pub headers: EmailHeaders,
-    pub attachments: Vec<AttachmentHeader>,
-}
-
 #[derive(Queryable)]
 struct EmailLoadByIDResult {
     pub id: Uuid,
@@ -160,8 +155,8 @@ struct EmailLoadByIDResult {
     pub html_body: Option<String>,
 }
 
-impl Email {
-    pub fn load_by_id(connection: &PgConnection, id: Uuid) -> Result<Email> {
+impl<'a> Loadable<'a, Uuid> for Email {
+    fn load(connection: &PgConnection, id: Uuid) -> Result<Email> {
         let email: EmailLoadByIDResult = email::table
             .find(id)
             .select((
@@ -183,7 +178,7 @@ impl Email {
                 .execute(connection)?;
         }
 
-        let headers = EmailHeaders::load_by_email(connection, &email.id)?;
+        let headers = Loadable::load(connection, email.id)?;
         let attachments = Loadable::load(connection, id)?;
 
         Ok(Email {
