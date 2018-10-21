@@ -8,7 +8,7 @@ use std::io::Write;
 
 pub const CLIENT_TO_SERVER_VERSION: ClientToServer = ClientToServer::Version(1);
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum ClientToServer {
     Version(u32),
     Authenticate(Box<LoginRequest>),

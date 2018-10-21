@@ -11,12 +11,12 @@ pub struct EmailHeader {
     pub read: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct LoadEmailRequest {
     pub id: Uuid,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Email {
     pub id: Uuid,
     pub inbox_id: Uuid,
@@ -31,7 +31,7 @@ pub struct Email {
     pub attachments: Vec<AttachmentHeader>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Header {
     pub key: String,
     pub value: String,

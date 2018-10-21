@@ -1,13 +1,13 @@
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct InboxHeader {
     pub id: Uuid,
     pub name: String,
     pub unread_count: usize,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct LoadInboxRequest {
     pub id: Uuid,
 }

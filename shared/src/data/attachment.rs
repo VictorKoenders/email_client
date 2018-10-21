@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AttachmentHeader {
     pub id: Uuid,
     pub mime_type: String,
@@ -8,7 +8,7 @@ pub struct AttachmentHeader {
     pub content_id: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct LoadAttachmentRequest {
     pub id: Uuid,
 }

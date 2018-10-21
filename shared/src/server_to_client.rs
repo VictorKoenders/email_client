@@ -8,7 +8,7 @@ use std::io::Write;
 
 pub const SERVER_TO_CLIENT_VERSION: ServerToClient = ServerToClient::Version(1);
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum ServerToClient {
     Version(u32),
     Error(String),

@@ -5,17 +5,20 @@ use actix::{
     StreamHandler, WrapFuture,
 };
 use actix_web::ws;
+use bincode;
 use crate::data::NewEmail;
 use crate::web::State as ServerState;
 use crate::Result;
 use serde::Serialize;
 use serde_json;
+use shared::ClientToServer;
 use std::net::SocketAddr;
 use std::str::FromStr;
 
 #[derive(Default)]
 pub struct Client {
     id: usize,
+    pub version_matches: bool,
     pub authenticated: bool,
 }
 
@@ -134,6 +137,15 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
             }
             ws::Message::Binary(bin) => {
                 println!("Received {:?} bytes", bin.len());
+                println!("{:?}", bin.as_ref());
+                let message: ClientToServer = match bincode::deserialize(bin.as_ref()) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        println!("Could not receive binary blob from client: {:?}", e);
+                        return;
+                    }
+                };
+                println!("Received {:?}", message);
                 /*let mut reader = ::std::io::Cursor::new(bin.take());
                 let mut input = ::protobuf::CodedInputStream::new(&mut reader);
                 use protobuf::Message;
