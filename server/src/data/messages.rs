@@ -1,8 +1,9 @@
-use super::models::inbox::InboxWithAddress;
+use super::models::inbox::NamedInbox;
 use actix::dev::Message;
 use crate::Result;
 use shared::attachment::Attachment;
 use shared::email::{Email, EmailHeader};
+use shared::inbox::Inbox;
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -13,14 +14,15 @@ impl Message for ListAddresses {
 }
 
 #[derive(Debug)]
-pub struct ListAddressResult(pub Vec<InboxWithAddress>);
+pub struct ListAddressResult(pub Vec<Inbox>);
 
 #[derive(Debug)]
 pub struct LoadInbox(pub Uuid);
 
 #[derive(Debug, Serialize)]
 pub struct LoadInboxResponse {
-    pub inbox_with_address: InboxWithAddress,
+    #[deprecated(note = "Should not be exposed, use shared modules only")]
+    pub inbox: NamedInbox,
     pub emails: Vec<EmailHeader>,
 }
 

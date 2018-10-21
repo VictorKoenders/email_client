@@ -1,6 +1,6 @@
 use super::email_attachment::AttachmentLoader;
 use super::email_header;
-use super::inbox::Inbox;
+use super::inbox::{Address, NamedInbox};
 use super::Loadable;
 use crate::data::schema::email;
 use crate::message::Message as ImapMessage;
@@ -98,7 +98,7 @@ pub struct EmptyEmailFromImap<'a> {
 impl<'a> EmailFromImap<'a> {
     pub fn save(connection: &PgConnection, message: &ImapMessage) -> Result<EmailHeader> {
         connection.transaction(|| {
-            let inbox = Inbox::try_load_by_address(connection, &message.to)?;
+            let inbox: Option<NamedInbox> = Loadable::load(connection, Address(&message.to))?;
             let email = EmailFromImap {
                 inbox_id: inbox.map(|i| i.id).unwrap_or_else(Uuid::nil),
                 imap_index: message.imap_index,

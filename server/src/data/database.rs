@@ -1,5 +1,5 @@
 use super::models::email::EmailFromImap;
-use super::models::inbox::InboxWithAddress;
+use super::models::inbox::NamedInbox;
 use super::models::Loadable;
 use super::{
     ListAddressResult, ListAddresses, LoadAttachment, LoadAttachmentResponse, LoadEmail,
@@ -13,6 +13,7 @@ use r2d2::Pool;
 use r2d2_diesel::ConnectionManager;
 use shared::attachment::Attachment;
 use shared::email::{Email, EmailHeader};
+use shared::inbox::Inbox;
 use std::env;
 
 pub struct Database {
@@ -114,7 +115,7 @@ impl Handler<ListAddresses> for Database {
         _context: &mut Self::Context,
     ) -> Result<ListAddressResult> {
         let connection = self.pool.get()?;
-        let addresses = InboxWithAddress::load(&connection)?;
+        let addresses = Vec::<Inbox>::load(&connection, ())?;
         Ok(ListAddressResult(addresses))
     }
 }
@@ -132,12 +133,13 @@ impl Handler<LoadInbox> for Database {
 
     fn handle(&mut self, msg: LoadInbox, _ctx: &mut Self::Context) -> Result<LoadInboxResponse> {
         let connection = self.pool.get()?;
-        let inbox_with_address = InboxWithAddress::load_by_id(&connection, &msg.0)?;
-        let emails: Vec<EmailHeader> = Loadable::load(&connection, inbox_with_address.id)?;
-        Ok(LoadInboxResponse {
-            inbox_with_address,
-            emails,
-        })
+        let inbox: Option<NamedInbox> = Loadable::load(&connection, msg.0)?;
+        let inbox = match inbox {
+            Some(i) => i,
+            None => bail!("Inbox not found"),
+        };
+        let emails: Vec<EmailHeader> = Loadable::load(&connection, inbox.id)?;
+        Ok(LoadInboxResponse { inbox, emails })
     }
 }
 
