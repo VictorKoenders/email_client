@@ -2,17 +2,11 @@ use bincode;
 use crate::{Model, Msg};
 use failure::Error;
 use serde::{Deserialize, Serialize};
+use shared::login::LoginRequest;
+use shared::{ClientToServer, ServerToClient, CLIENT_TO_SERVER_VERSION};
 use std::fmt;
 use yew::prelude::*;
 use yew::services::websocket::*;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum ServerToClient {}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum ClientToServer {
-    LoadInboxes,
-}
 
 pub struct Send<T>(pub T);
 
@@ -78,7 +72,7 @@ impl Network {
 
     pub fn reconnect(&mut self) {
         self.task = Some(self.service.connect(
-            "ws://localhost:8001/ws",
+            "ws://localhost:8001/ws/",
             self.data_callback.clone(),
             self.connect_callback.clone(),
         ));
@@ -86,7 +80,13 @@ impl Network {
 
     pub fn load_inboxes(&mut self) {
         if let Some(task) = &mut self.task {
-            task.send_binary(Send(ClientToServer::LoadInboxes));
+            task.send_binary(Send(CLIENT_TO_SERVER_VERSION));
+        }
+    }
+
+    pub fn attempt_login(&mut self, request: LoginRequest) {
+        if let Some(task) = &mut self.task {
+            task.send_binary(Send(ClientToServer::Authenticate(Box::new(request))));
         }
     }
 }

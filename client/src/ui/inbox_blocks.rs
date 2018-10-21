@@ -10,13 +10,13 @@ pub enum Msg {
 #[derive(Default)]
 pub struct InboxBlocks {
     pub inboxes: Vec<Rc<Inbox>>,
-    pub onselect: Option<Callback<usize>>,
+    pub on_select: Option<Callback<usize>>,
 }
 
 #[derive(Default, Clone, PartialEq)]
 pub struct Properties {
     pub inboxes: Vec<Rc<Inbox>>,
-    pub onselect: Option<Callback<usize>>,
+    pub on_select: Option<Callback<usize>>,
 }
 
 impl Component for InboxBlocks {
@@ -26,21 +26,21 @@ impl Component for InboxBlocks {
     fn create(props: Self::Properties, _: ComponentLink<Self>) -> Self {
         Self {
             inboxes: props.inboxes,
-            onselect: props.onselect,
+            on_select: props.on_select,
         }
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
         self.inboxes = props.inboxes;
-        self.onselect = props.onselect;
+        self.on_select = props.on_select;
         true
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::SelectInbox(index) => {
-                if let Some(onselect) = &self.onselect {
-                    onselect.emit(index);
+                if let Some(on_select) = &self.on_select {
+                    on_select.emit(index);
                 }
                 false
             }

@@ -1,7 +1,5 @@
 #[macro_use]
 extern crate yew;
-#[macro_use]
-extern crate serde_derive;
 
 mod network;
 mod ui;
@@ -9,6 +7,9 @@ mod ui;
 use crate::network::*;
 use crate::ui::inbox_blocks::InboxBlocks;
 use crate::ui::inbox_list::InboxList;
+use crate::ui::login::Login;
+use shared::login::LoginRequest;
+use shared::ServerToClient;
 use std::rc::Rc;
 use std::time::Duration;
 use yew::prelude::*;
@@ -21,6 +22,15 @@ pub struct Model {
     pub reconnect_callback: Callback<()>,
     pub reconnect_timeout: Option<TimeoutTask>,
     pub console: ConsoleService,
+    pub state: State,
+}
+
+pub enum State {
+    NotAuthenticated,
+    Authenticated(AuthenticatedModel),
+}
+
+pub struct AuthenticatedModel {
     pub inboxes: Vec<Rc<Inbox>>,
     pub current_inbox: Option<Rc<Inbox>>,
     pub current_editing_inbox: Option<Rc<Inbox>>,
@@ -40,6 +50,7 @@ pub enum Msg {
     Reconnect,
     Connected(WebSocketStatus),
     DataReceived(DataResult<ServerToClient>),
+    AttemptLogin(LoginRequest),
 }
 
 impl Component for Model {
@@ -52,37 +63,27 @@ impl Component for Model {
             reconnect_callback: link.send_back(|_| Msg::Reconnect),
             reconnect_timeout: None,
             console: ConsoleService::new(),
-            inboxes: vec![
-                Rc::new(Inbox {
-                    id: String::from("1"),
-                    name: String::from("Catch-all"),
-                    unread_count: 0,
-                }),
-                Rc::new(Inbox {
-                    id: String::from("2"),
-                    name: String::from("Pixelbar"),
-                    unread_count: 0,
-                }),
-                Rc::new(Inbox {
-                    id: String::from("3"),
-                    name: String::from("Spam"),
-                    unread_count: 1000,
-                }),
-            ],
-            current_inbox: None,
-            current_editing_inbox: None,
+            state: State::NotAuthenticated,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::SelectInbox(index) => {
-                self.current_inbox = Some(self.inboxes[index].clone());
-                true
+                if let State::Authenticated(state) = &mut self.state {
+                    state.current_inbox = Some(state.inboxes[index].clone());
+                    true
+                } else {
+                    false
+                }
             }
             Msg::EditInbox(index) => {
-                self.current_editing_inbox = Some(self.inboxes[index].clone());
-                true
+                if let State::Authenticated(state) = &mut self.state {
+                    state.current_editing_inbox = Some(state.inboxes[index].clone());
+                    true
+                } else {
+                    false
+                }
             }
             Msg::Reconnect => {
                 self.reconnect_timeout = None;
@@ -107,6 +108,10 @@ impl Component for Model {
                 self.disconnect_and_reconnect_network();
                 false
             }
+            Msg::AttemptLogin(request) => {
+                self.network.attempt_login(request);
+                false
+            }
         }
     }
 }
@@ -122,22 +127,28 @@ impl Model {
 
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
-        if let Some(inbox) = &self.current_inbox {
-            html! {
-                <>
-                    <InboxList:
-                        inboxes=self.inboxes.clone(),
-                        onselect=Msg::SelectInbox,
-                        current=Some(inbox.clone()),
+        if let State::Authenticated(state) = &self.state {
+            if let Some(inbox) = &state.current_inbox {
+                html! {
+                    <>
+                        <InboxList:
+                            inboxes=state.inboxes.clone(),
+                            on_select=Msg::SelectInbox,
+                            current=Some(inbox.clone()),
+                        />
+                    </>
+                }
+            } else {
+                html!{
+                    <InboxBlocks:
+                        inboxes=state.inboxes.clone(),
+                        on_select=Msg::SelectInbox,
                     />
-                </>
+                }
             }
         } else {
-            html!{
-                <InboxBlocks:
-                    inboxes=self.inboxes.clone(),
-                    onselect=Msg::SelectInbox,
-                />
+            html! {
+                <Login: on_attempt_login=Msg::AttemptLogin, />
             }
         }
     }
