@@ -1,6 +1,6 @@
 use super::email_attachment::AttachmentLoader;
 use super::email_header;
-use super::inbox::{Address, NamedInbox};
+use super::inbox::Address;
 use super::Loadable;
 use crate::data::schema::email;
 use crate::message::Message as ImapMessage;
@@ -8,6 +8,7 @@ use crate::Result;
 use diesel::pg::PgConnection;
 use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
 use shared::email::{Email, EmailHeader};
+use shared::inbox::InboxHeader;
 use uuid::Uuid;
 
 #[derive(Queryable)]
@@ -98,7 +99,7 @@ pub struct EmptyEmailFromImap<'a> {
 impl<'a> EmailFromImap<'a> {
     pub fn save(connection: &PgConnection, message: &ImapMessage) -> Result<EmailHeader> {
         connection.transaction(|| {
-            let inbox: Option<NamedInbox> = Loadable::load(connection, Address(&message.to))?;
+            let inbox: Option<InboxHeader> = Loadable::load(connection, Address(&message.to))?;
             let email = EmailFromImap {
                 inbox_id: inbox.map(|i| i.id).unwrap_or_else(Uuid::nil),
                 imap_index: message.imap_index,

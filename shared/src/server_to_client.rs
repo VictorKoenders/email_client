@@ -1,7 +1,7 @@
 use bincode;
 use crate::attachment::Attachment;
 use crate::email::Email;
-use crate::inbox::Inbox;
+use crate::inbox::LoadInboxResponse;
 use crate::login::LoginResponse;
 use failure::{Error, ResultExt};
 use std::io::Write;
@@ -13,7 +13,7 @@ pub enum ServerToClient {
     Version(u32),
     Error(String),
     LoginResponse(Box<LoginResponse>),
-    LoadInboxResponse(Box<Inbox>),
+    LoadInboxResponse(Box<LoadInboxResponse>),
     LoadEmailResponse(Box<Email>),
     LoadAttachmentResponse(Box<Attachment>),
     NewEmail(Box<Email>),

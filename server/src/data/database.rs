@@ -1,9 +1,8 @@
 use super::models::email::EmailFromImap;
-use super::models::inbox::NamedInbox;
 use super::models::Loadable;
 use super::{
     ListAddressResult, ListAddresses, LoadAttachment, LoadAttachmentResponse, LoadEmail,
-    LoadEmailResponse, LoadInbox, LoadInboxResponse,
+    LoadEmailResponse, LoadInbox,
 };
 use actix::{Actor, ArbiterService, Context, Handler, Recipient, Supervised};
 use crate::mail_reader::ImapMessage;
@@ -13,7 +12,7 @@ use r2d2::Pool;
 use r2d2_diesel::ConnectionManager;
 use shared::attachment::Attachment;
 use shared::email::{Email, EmailHeader};
-use shared::inbox::Inbox;
+use shared::inbox::{Inbox, InboxHeader, LoadInboxResponse};
 use std::env;
 
 pub struct Database {
@@ -133,7 +132,7 @@ impl Handler<LoadInbox> for Database {
 
     fn handle(&mut self, msg: LoadInbox, _ctx: &mut Self::Context) -> Result<LoadInboxResponse> {
         let connection = self.pool.get()?;
-        let inbox: Option<NamedInbox> = Loadable::load(&connection, msg.0)?;
+        let inbox: Option<InboxHeader> = Loadable::load(&connection, msg.0)?;
         let inbox = match inbox {
             Some(i) => i,
             None => bail!("Inbox not found"),

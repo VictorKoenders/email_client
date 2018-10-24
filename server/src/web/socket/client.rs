@@ -109,9 +109,14 @@ impl StreamHandler<ws::Message, ws::ProtocolError> for Client {
                     ClientToServer::Authenticate(request) => {
                         MessageHandler.handle(self, ctx, *request)
                     }
-                    x => {
-                        println!("Unimplemented: {:?}", x);
-                        return;
+                    ClientToServer::LoadInbox(request) => {
+                        MessageHandler.handle(self, ctx, *request)
+                    }
+                    ClientToServer::LoadEmail(request) => {
+                        MessageHandler.handle(self, ctx, *request)
+                    }
+                    ClientToServer::LoadAttachment(request) => {
+                        MessageHandler.handle(self, ctx, *request)
                     }
                 };
                 if let Err(e) = result {

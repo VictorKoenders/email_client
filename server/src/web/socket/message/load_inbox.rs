@@ -1,12 +1,10 @@
-/*
 use super::{Handler, MessageHandler};
-use actix::{fut, Actor, ActorContext, ActorFuture, ContextFutureSpawner, WrapFuture};
-use data::messages::LoadInbox;
-// use proto::inbox::{LoadInboxRequest, LoadInboxResponse};
-use std::str::FromStr;
-use uuid::Uuid;
-use web::socket::client::{Client, Sender};
-use Result;
+use actix::{Actor, ActorFuture, ContextFutureSpawner, WrapFuture};
+use crate::data::messages::LoadInbox;
+use crate::web::socket::client::Client;
+use crate::Result;
+use shared::inbox::{LoadInboxRequest, LoadInboxResponse};
+use shared::ServerToClient;
 
 impl MessageHandler<LoadInboxRequest> for Handler {
     fn handle(
@@ -18,22 +16,14 @@ impl MessageHandler<LoadInboxRequest> for Handler {
         if !client.authenticated {
             bail!("Not authenticated");
         }
-        let uuid = Uuid::from_str(&value.id)?;
         ctx.state()
             .database
-            .send(LoadInbox(uuid))
+            .send(LoadInbox(value.id))
             .into_actor(client)
-            .then(|res, _, ctx| {
-                match res {
-                    Ok(Ok(res)) => {
-                        let response: LoadInboxResponse = res.into();
-                        let _ = ctx.send_proto(response);
-                    }
-                    _ => ctx.stop(),
-                }
-                fut::ok(())
-            }).wait(ctx);
+            .then(super::map_result(|res: LoadInboxResponse| {
+                ServerToClient::LoadInboxResponse(res.into())
+            }))
+            .wait(ctx);
         Ok(())
     }
 }
-*/

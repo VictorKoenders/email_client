@@ -5,7 +5,7 @@ use diesel::dsl::count_star;
 use diesel::dsl::exists;
 use diesel::pg::PgConnection;
 use diesel::{BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use shared::inbox::Inbox;
+use shared::inbox::{Inbox, InboxHeader};
 use uuid::Uuid;
 
 #[derive(Queryable)]
@@ -52,24 +52,36 @@ impl<'a> Loadable<'a, ()> for Vec<Inbox> {
     }
 }
 
-impl<'a> Loadable<'a, Uuid> for Option<NamedInbox> {
-    fn load(connection: &PgConnection, id: Uuid) -> Result<Option<NamedInbox>> {
+impl<'a> Loadable<'a, Uuid> for Option<InboxHeader> {
+    fn load(connection: &PgConnection, id: Uuid) -> Result<Option<InboxHeader>> {
         let query = inbox::table
             .select((inbox::dsl::id, inbox::dsl::name))
             .find(id);
-        query.get_result(connection).optional().map_err(Into::into)
+
+        let inbox_header: Option<InboxHeaderLoader> = query.get_result(connection).optional()?;
+        Ok(inbox_header.map(Into::into))
     }
 }
 
 pub struct Address<'a>(pub &'a str);
 
-#[derive(Debug, Serialize, Queryable)]
-pub struct NamedInbox {
+#[derive(Serialize, Queryable)]
+struct InboxHeaderLoader {
     pub id: Uuid,
     pub name: String,
 }
-impl<'a> Loadable<'a, Address<'a>> for Option<NamedInbox> {
-    fn load(connection: &PgConnection, address: Address<'a>) -> Result<Option<NamedInbox>> {
+
+impl Into<InboxHeader> for InboxHeaderLoader {
+    fn into(self) -> InboxHeader {
+        InboxHeader {
+            id: self.id,
+            name: self.name,
+        }
+    }
+}
+
+impl<'a> Loadable<'a, Address<'a>> for Option<InboxHeader> {
+    fn load(connection: &PgConnection, address: Address<'a>) -> Result<Option<InboxHeader>> {
         let query = inbox::table.select((inbox::id, inbox::name)).filter(exists(
             inbox_address::table.filter(
                 inbox_address::inbox_id
@@ -78,7 +90,8 @@ impl<'a> Loadable<'a, Address<'a>> for Option<NamedInbox> {
             ),
         ));
 
-        query.get_result(connection).optional().map_err(Into::into)
+        let inbox_header: Option<InboxHeaderLoader> = query.get_result(connection).optional()?;
+        Ok(inbox_header.map(Into::into))
     }
 }
 

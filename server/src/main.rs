@@ -1,4 +1,5 @@
 #![allow(proc_macro_derive_resolution_fallback)]
+#![feature(unboxed_closures, fn_traits)]
 
 #[macro_use]
 extern crate actix;
@@ -9,11 +10,11 @@ extern crate serde_derive;
 #[macro_use]
 extern crate diesel;
 
-pub mod attachment;
-pub mod data;
-pub mod mail_reader;
-pub mod message;
-pub mod web;
+mod attachment;
+mod data;
+mod mail_reader;
+mod message;
+mod web;
 
 use actix::ArbiterService;
 use clap::{App, Arg};

@@ -153,6 +153,8 @@ fn sanitizer(input: &str) -> String {
     })
 }
 
+// Will be implemented soon (tm)
+#[allow(dead_code)]
 pub struct Outgoing {
     pub from_email: String,
     pub from_alias: String,
@@ -163,6 +165,8 @@ pub struct Outgoing {
 }
 
 impl Outgoing {
+    // Will be implemented soon (tm)
+    #[allow(dead_code)]
     pub fn send(self) -> Result<()> {
         let email = EmailBuilder::new()
             .to((self.to_email, self.to_alias))
