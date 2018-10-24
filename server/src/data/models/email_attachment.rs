@@ -1,4 +1,4 @@
-use super::email_attachment_header::HeaderLoader;
+use super::email_attachment_header::save as save_headers;
 use super::Loadable;
 use crate::attachment::Attachment as ImapAttachment;
 use crate::data::schema::email_attachment;
@@ -26,55 +26,6 @@ impl Into<AttachmentHeader> for AttachmentInfo {
         }
     }
 }
-/*
-#[derive(Debug, Serialize, Deserialize, Queryable)]
-#[deprecated(note = "Use shared::attachment::AttachmentHeader instead")]
-pub struct AttachmentInfo {
-    pub id: Uuid,
-    pub mime_type: String,
-    pub name: Option<String>,
-    pub content_id: Option<String>,
-}
-
-impl AttachmentInfo {
-    pub fn from_id(id: Uuid) -> AttachmentInfo {
-        AttachmentInfo {
-            id,
-            mime_type: String::new(),
-            name: None,
-            content_id: None,
-        }
-    }
-
-    pub fn load_by_email(
-        connection: &PgConnection,
-        email_id: &Uuid,
-    ) -> Result<Vec<AttachmentInfo>> {
-        let query = email_attachment::table
-            .select((
-                email_attachment::dsl::id,
-                email_attachment::dsl::mime_type,
-                email_attachment::dsl::name,
-                email_attachment::dsl::content_id,
-            ))
-            .filter(email_attachment::dsl::email_id.eq(email_id));
-
-        query.get_results(connection).map_err(Into::into)
-    }
-}
-*/
-
-/*
-#[derive(Debug, Serialize)]
-#[deprecated(note = "Use shared::attachment::Attachment instead")]
-pub struct Attachment {
-    pub id: Uuid,
-    pub headers: HashMap<String, String>,
-    pub mime_type: String,
-    pub name: Option<String>,
-    pub content_id: Option<String>,
-    pub contents: Vec<u8>,
-}*/
 
 #[derive(Queryable)]
 pub struct AttachmentLoader {
@@ -143,34 +94,9 @@ impl AttachmentLoader {
             .values(&insert)
             .returning(email_attachment::dsl::id)
             .get_result(connection)?;
-        HeaderLoader::save(connection, &uuid, attachment.headers.iter())?;
+        save_headers(connection, &uuid, attachment.headers.iter())?;
         Ok(())
     }
-    /*
-    pub fn load_by_id(connection: &PgConnection, id: Uuid) -> Result<Attachment> {
-        let result: AttachmentLoader = email_attachment::table
-            .select((
-                email_attachment::dsl::id,
-                email_attachment::dsl::mime_type,
-                email_attachment::dsl::name,
-                email_attachment::dsl::content_id,
-                email_attachment::dsl::contents,
-            ))
-            .find(id)
-            .get_result(connection)?;
-    
-        let headers = Loadable::load(connection, id)?;
-    
-        Ok(Attachment {
-            id: result.id,
-            headers,
-            mime_type: result.mime_type,
-            name: result.name,
-            content_id: result.content_id,
-            contents: result.contents,
-        })
-    }
-    */
 }
 
 #[derive(Insertable)]

@@ -9,8 +9,6 @@ use actix_web::ws;
 use bincode;
 use crate::data::NewEmail;
 use crate::web::State as ServerState;
-use serde::Serialize;
-use serde_json;
 use shared::{ClientToServer, ServerToClient};
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -32,7 +30,7 @@ impl RequestIp for ::actix_web::HttpRequest<ServerState> {
                 match SocketAddr::from_str(s) {
                     Ok(s) => return s,
                     Err(e) => {
-                        println!("Could not parse x-real-ip {:?}: {:?}", s, e);
+                        eprintln!("Could not parse x-real-ip {:?}: {:?}", s, e);
                     }
                 }
             }
@@ -69,17 +67,6 @@ impl Actor for Client {
             .do_send(Disconnect { id: self.id });
         ctx.stop();
         Running::Stop
-    }
-}
-
-pub trait ContextSender {
-    #[deprecated(note = "Switch to protobuf")]
-    fn send(&mut self, msg: &impl Serialize);
-}
-
-impl ContextSender for <Client as Actor>::Context {
-    fn send(&mut self, obj: &impl Serialize) {
-        self.text(serde_json::to_string(obj).unwrap());
     }
 }
 

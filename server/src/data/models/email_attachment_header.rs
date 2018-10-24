@@ -7,7 +7,7 @@ use shared::attachment::Header;
 use uuid::Uuid;
 
 #[derive(Queryable)]
-pub struct HeaderLoader {
+struct HeaderLoader {
     pub key: String,
     pub value: String,
 }
@@ -34,24 +34,22 @@ impl<'a> Loadable<'a, Uuid> for Vec<Header> {
     }
 }
 
-impl HeaderLoader {
-    pub fn save<'a>(
-        connection: &'a PgConnection,
-        email_attachment_id: &'a Uuid,
-        headers: impl Iterator<Item = (&'a String, &'a String)>,
-    ) -> Result<()> {
-        for (key, value) in headers {
-            let insert = HeaderInsert {
-                email_attachment_id,
-                key,
-                value,
-            };
-            ::diesel::insert_into(email_attachment_header::table)
-                .values(&insert)
-                .execute(connection)?;
-        }
-        Ok(())
+pub fn save<'a>(
+    connection: &'a PgConnection,
+    email_attachment_id: &'a Uuid,
+    headers: impl Iterator<Item = (&'a String, &'a String)>,
+) -> Result<()> {
+    for (key, value) in headers {
+        let insert = HeaderInsert {
+            email_attachment_id,
+            key,
+            value,
+        };
+        ::diesel::insert_into(email_attachment_header::table)
+            .values(&insert)
+            .execute(connection)?;
     }
+    Ok(())
 }
 
 #[derive(Insertable)]

@@ -1,9 +1,9 @@
 use super::{Handler, MessageHandler};
 use actix::{Actor, ActorFuture, ContextFutureSpawner, WrapFuture};
-use crate::data::messages::{LoadAttachment, LoadAttachmentResponse};
+use crate::data::messages::LoadAttachment;
 use crate::web::socket::client::Client;
 use crate::Result;
-use shared::attachment::LoadAttachmentRequest;
+use shared::attachment::{Attachment, LoadAttachmentRequest};
 use shared::ServerToClient;
 
 impl MessageHandler<LoadAttachmentRequest> for Handler {
@@ -20,8 +20,8 @@ impl MessageHandler<LoadAttachmentRequest> for Handler {
             .database
             .send(LoadAttachment(value.id))
             .into_actor(client)
-            .then(super::map_result(|res: LoadAttachmentResponse| {
-                ServerToClient::LoadAttachmentResponse(res.attachment.into())
+            .then(super::map_result(|res: Attachment| {
+                ServerToClient::LoadAttachmentResponse(res.into())
             }))
             .wait(ctx);
         Ok(())

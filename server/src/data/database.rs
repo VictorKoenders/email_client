@@ -1,9 +1,8 @@
+use super::messages::{
+    AddNewEmailListener, ListAddresses, LoadAttachment, LoadEmail, LoadInbox, NewEmail,
+};
 use super::models::email::EmailFromImap;
 use super::models::Loadable;
-use super::{
-    ListAddressResult, ListAddresses, LoadAttachment, LoadAttachmentResponse, LoadEmail,
-    LoadEmailResponse, LoadInbox,
-};
 use actix::{Actor, ArbiterService, Context, Handler, Recipient, Supervised};
 use crate::mail_reader::ImapMessage;
 use crate::Result;
@@ -32,6 +31,22 @@ impl Default for Database {
     }
 }
 
+impl Actor for Database {
+    type Context = Context<Self>;
+}
+
+impl Supervised for Database {
+    fn restarting(&mut self, _ctx: &mut Self::Context) {
+        println!("[Database] Restarting");
+    }
+}
+
+impl ArbiterService for Database {
+    fn service_started(&mut self, _ctx: &mut Context<Self>) {
+        println!("[Database] Started");
+    }
+}
+
 impl Database {
     pub fn clear() {
         use super::schema::*;
@@ -56,9 +71,6 @@ impl Database {
     }
 }
 
-#[derive(Message)]
-pub struct AddNewEmailListener(pub Recipient<NewEmail>);
-
 impl Handler<AddNewEmailListener> for Database {
     type Result = ();
     fn handle(&mut self, message: AddNewEmailListener, _context: &mut Self::Context) {
@@ -66,12 +78,6 @@ impl Handler<AddNewEmailListener> for Database {
     }
 }
 
-#[derive(Message, Clone)]
-pub struct NewEmail(pub EmailHeader);
-
-impl Actor for Database {
-    type Context = Context<Self>;
-}
 impl Handler<ImapMessage> for Database {
     type Result = ();
     fn handle(&mut self, message: ImapMessage, _context: &mut Self::Context) {
@@ -107,24 +113,24 @@ impl Handler<ImapMessage> for Database {
 }
 
 impl Handler<ListAddresses> for Database {
-    type Result = Result<ListAddressResult>;
+    type Result = Result<Vec<Inbox>>;
     fn handle(
         &mut self,
         _message: ListAddresses,
         _context: &mut Self::Context,
-    ) -> Result<ListAddressResult> {
+    ) -> Result<Vec<Inbox>> {
         let connection = self.pool.get()?;
         let addresses = Vec::<Inbox>::load(&connection, ())?;
-        Ok(ListAddressResult(addresses))
+        Ok(addresses)
     }
 }
 impl Handler<LoadEmail> for Database {
-    type Result = Result<LoadEmailResponse>;
+    type Result = Result<Email>;
 
-    fn handle(&mut self, msg: LoadEmail, _ctx: &mut Self::Context) -> Result<LoadEmailResponse> {
+    fn handle(&mut self, msg: LoadEmail, _ctx: &mut Self::Context) -> Result<Email> {
         let connection = self.pool.get()?;
         let email = Email::load(&connection, msg.0)?;
-        Ok(LoadEmailResponse { email })
+        Ok(email)
     }
 }
 impl Handler<LoadInbox> for Database {
@@ -143,26 +149,11 @@ impl Handler<LoadInbox> for Database {
 }
 
 impl Handler<LoadAttachment> for Database {
-    type Result = Result<LoadAttachmentResponse>;
+    type Result = Result<Attachment>;
 
-    fn handle(
-        &mut self,
-        msg: LoadAttachment,
-        _ctx: &mut Self::Context,
-    ) -> Result<LoadAttachmentResponse> {
+    fn handle(&mut self, msg: LoadAttachment, _ctx: &mut Self::Context) -> Result<Attachment> {
         let connection = self.pool.get()?;
         let attachment = Attachment::load(&connection, msg.0)?;
-        Ok(LoadAttachmentResponse { attachment })
-    }
-}
-impl Supervised for Database {
-    fn restarting(&mut self, _ctx: &mut Self::Context) {
-        println!("[Database] Restarting");
-    }
-}
-
-impl ArbiterService for Database {
-    fn service_started(&mut self, _ctx: &mut Context<Self>) {
-        println!("[Database] Started");
+        Ok(attachment)
     }
 }

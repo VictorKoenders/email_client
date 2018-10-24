@@ -3,8 +3,7 @@ pub mod messages;
 pub mod models;
 pub mod schema;
 
-pub use self::database::{AddNewEmailListener, Database, NewEmail};
+pub use self::database::Database;
 pub use self::messages::{
-    ListAddressResult, ListAddresses, LoadAttachment, LoadAttachmentResponse, LoadEmail,
-    LoadEmailResponse, LoadInbox,
+    AddNewEmailListener, ListAddresses, LoadAttachment, LoadEmail, LoadInbox, NewEmail,
 };

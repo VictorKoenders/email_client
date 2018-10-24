@@ -39,18 +39,16 @@ pub fn download_attachment(
         match res {
             Ok(Ok(res)) => future::ok(
                 HttpResponse::Ok()
-                    .header("Content-Type", res.attachment.mime_type)
+                    .header("Content-Type", res.mime_type)
                     .header("Content-Transfer-Encoding", "Binary")
                     .header(
                         "Content-disposition",
                         format!(
                             "attachment; filename={:?}",
-                            res.attachment
-                                .name
-                                .unwrap_or_else(|| String::from("unknown"))
+                            res.name.unwrap_or_else(|| String::from("unknown"))
                         ),
                     )
-                    .body(res.attachment.contents),
+                    .body(res.contents),
             ),
             x => future::ok(HttpResponse::InternalServerError().body(format!("{:?}", x))),
         }

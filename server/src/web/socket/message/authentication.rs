@@ -1,8 +1,9 @@
 use super::{Handler, MessageHandler};
-use actix::{fut, Actor, ActorContext, ActorFuture, ContextFutureSpawner, WrapFuture};
+use actix::{Actor, ActorFuture, ContextFutureSpawner, WrapFuture};
 use crate::data::messages::ListAddresses;
 use crate::web::socket::client::Client;
 use crate::Result;
+use shared::inbox::Inbox;
 use shared::login::{LoginRequest, LoginResponse};
 use shared::ServerToClient;
 use std::env;
@@ -26,21 +27,9 @@ impl MessageHandler<LoginRequest> for Handler {
                 .database
                 .send(ListAddresses)
                 .into_actor(client)
-                .then(|res, _, ctx| {
-                    match res {
-                        Ok(Ok(res)) => {
-                            if let Ok(bytes) = ServerToClient::LoginResponse(
-                                LoginResponse::Success { inboxes: res.0 }.into(),
-                            )
-                            .to_bytes()
-                            {
-                                ctx.binary(bytes);
-                            }
-                        }
-                        _ => ctx.stop(),
-                    }
-                    fut::ok(())
-                })
+                .then(super::map_result(|inboxes: Vec<Inbox>| {
+                    ServerToClient::LoginResponse(LoginResponse::Success { inboxes }.into())
+                }))
                 .wait(ctx);
         } else if let Ok(bytes) =
             ServerToClient::LoginResponse(LoginResponse::Failed.into()).to_bytes()

@@ -1,9 +1,9 @@
 use super::{Handler, MessageHandler};
 use actix::{Actor, ActorFuture, ContextFutureSpawner, WrapFuture};
-use crate::data::messages::{LoadEmail, LoadEmailResponse};
+use crate::data::messages::LoadEmail;
 use crate::web::socket::client::Client;
 use crate::Result;
-use shared::email::LoadEmailRequest;
+use shared::email::{Email, LoadEmailRequest};
 use shared::ServerToClient;
 
 impl MessageHandler<LoadEmailRequest> for Handler {
@@ -20,8 +20,8 @@ impl MessageHandler<LoadEmailRequest> for Handler {
             .database
             .send(LoadEmail(value.id))
             .into_actor(client)
-            .then(super::map_result(|res: LoadEmailResponse| {
-                ServerToClient::LoadEmailResponse(res.email.into())
+            .then(super::map_result(|res: Email| {
+                ServerToClient::LoadEmailResponse(res.into())
             }))
             .wait(ctx);
         Ok(())

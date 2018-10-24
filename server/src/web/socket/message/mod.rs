@@ -9,18 +9,16 @@ mod load_attachment;
 mod load_email;
 mod load_inbox;
 
-pub struct Handler;
-
-pub struct MappedResult<TItem> {
-    convert: Box<Fn(TItem) -> ServerToClient>,
-}
-
 fn try_send_error(e: impl Into<Error>, ctx: &mut <Client as Actor>::Context) {
     if let Ok(bytes) = ServerToClient::Error(format!("{:?}", e.into())).to_bytes() {
         ctx.binary(bytes);
     } else {
         ctx.stop();
     }
+}
+
+pub struct MappedResult<TItem> {
+    convert: Box<Fn(TItem) -> ServerToClient>,
 }
 
 impl<TItem>
@@ -60,6 +58,7 @@ pub fn map_result<TItem>(
     }
 }
 
+pub struct Handler;
 pub trait MessageHandler<TMessage> {
     fn handle(
         &self,

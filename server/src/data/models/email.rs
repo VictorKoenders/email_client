@@ -12,7 +12,7 @@ use shared::inbox::InboxHeader;
 use uuid::Uuid;
 
 #[derive(Queryable)]
-pub struct EmailLoader {
+struct EmailLoader {
     pub id: Uuid,
     pub inbox_id: Uuid,
     pub from: Option<String>,
@@ -53,7 +53,7 @@ impl<'a> Loadable<'a, Uuid> for Vec<EmailHeader> {
 }
 
 #[derive(Queryable)]
-pub struct EmailResult {
+struct EmailResult {
     pub id: Uuid,
     pub inbox_id: Uuid,
     pub from: Option<String>,
