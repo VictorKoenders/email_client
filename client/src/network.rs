@@ -2,6 +2,7 @@ use bincode;
 use crate::{Model, Msg};
 use failure::Error;
 use serde::{Deserialize, Serialize};
+use shared::inbox::{Inbox, LoadInboxRequest};
 use shared::login::LoginRequest;
 use shared::{ClientToServer, ServerToClient, CLIENT_TO_SERVER_VERSION};
 use std::fmt;
@@ -84,9 +85,21 @@ impl Network {
         }
     }
 
+    pub fn load_inbox(&mut self, inbox: &Inbox) {
+        if let Some(task) = &mut self.task {
+            task.send_binary(Send(ClientToServer::LoadInbox(
+                LoadInboxRequest { id: inbox.id }.into(),
+            )));
+
+            task.send_binary(Send(ClientToServer::LoadInbox(Box::new(
+                LoadInboxRequest { id: inbox.id },
+            ))));
+        }
+    }
+
     pub fn attempt_login(&mut self, request: LoginRequest) {
         if let Some(task) = &mut self.task {
-            task.send_binary(Send(ClientToServer::Authenticate(Box::new(request))));
+            task.send_binary(Send(ClientToServer::Authenticate(request.into())));
         }
     }
 }

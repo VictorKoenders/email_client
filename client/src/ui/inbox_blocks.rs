@@ -1,4 +1,4 @@
-use crate::Inbox;
+use shared::inbox::Inbox;
 use std::rc::Rc;
 use yew::prelude::*;
 
