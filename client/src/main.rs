@@ -99,13 +99,11 @@ impl Component for Model {
                 false
             }
             Msg::Connected(state) => {
-                self.console.log(&format!("Connected: {:?}", state));
                 if let WebSocketStatus::Opened = state {
-                    self.network.load_inboxes();
+                    false
                 } else {
-                    self.disconnect_and_reconnect_network();
+                    self.disconnect_and_reconnect_network()
                 }
-                false
             }
             Msg::DataReceived(DataResult(Ok(msg))) => self.handle_server_message(msg),
             Msg::DataReceived(DataResult(Err(e))) => {
@@ -170,6 +168,7 @@ impl Model {
             }
             ServerToClient::LoadEmailResponse(response) => {
                 if let State::Authenticated(model) = &mut self.state {
+                    self.console.log(&format!("{:#?}", response));
                     model.current_email = Some(Rc::new(*response));
                     return true;
                 }
@@ -187,11 +186,15 @@ impl Model {
         }
     }
 
-    fn disconnect_and_reconnect_network(&mut self) {
+    fn disconnect_and_reconnect_network(&mut self) -> ShouldRender {
         self.network.disconnect();
         let task =
             TimeoutService::new().spawn(Duration::from_secs(5), self.reconnect_callback.clone());
         self.reconnect_timeout = Some(task);
+        self.state = State::NotAuthenticated {
+            error: Some(String::from("Disconnected from server")),
+        };
+        true
     }
 
     fn render_emails(&self, state: &AuthenticatedModel, _inbox: &Inbox) -> Html<Self> {
