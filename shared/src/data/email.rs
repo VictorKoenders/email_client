@@ -11,6 +11,12 @@ pub struct EmailHeader {
     pub read: bool,
 }
 
+impl PartialEq<EmailHeader> for EmailHeader {
+    fn eq(&self, other: &EmailHeader) -> bool {
+        self.id == other.id
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoadEmailRequest {
     pub id: Uuid,
@@ -29,6 +35,12 @@ pub struct Email {
     pub html_body: Option<String>,
     pub headers: Vec<Header>,
     pub attachments: Vec<AttachmentHeader>,
+}
+
+impl PartialEq<Email> for Email {
+    fn eq(&self, other: &Email) -> bool {
+        self.id == other.id
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

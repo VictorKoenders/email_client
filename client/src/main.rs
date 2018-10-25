@@ -7,9 +7,12 @@ mod network;
 mod ui;
 
 use crate::network::*;
+use crate::ui::email_display::EmailDisplay;
+use crate::ui::email_list::EmailList;
 use crate::ui::inbox_blocks::InboxBlocks;
 use crate::ui::inbox_list::InboxList;
 use crate::ui::login::Login;
+use shared::email::{Email, EmailHeader};
 use shared::inbox::Inbox;
 use shared::login::{LoginRequest, LoginResponse};
 use shared::ServerToClient;
@@ -38,6 +41,8 @@ pub struct AuthenticatedModel {
     pub inboxes: Vec<Rc<Inbox>>,
     pub current_inbox: Option<Rc<Inbox>>,
     pub current_editing_inbox: Option<Rc<Inbox>>,
+    pub emails: Vec<Rc<EmailHeader>>,
+    pub current_email: Option<Rc<Email>>,
 }
 #[derive(Debug)]
 pub enum Msg {
@@ -48,6 +53,7 @@ pub enum Msg {
     Connected(WebSocketStatus),
     DataReceived(DataResult<ServerToClient>),
     AttemptLogin(LoginRequest),
+    EmailSelected(usize),
 }
 
 impl Component for Model {
@@ -93,7 +99,7 @@ impl Component for Model {
                 false
             }
             Msg::Connected(state) => {
-                ConsoleService::new().log(&format!("Connected: {:?}", state));
+                self.console.log(&format!("Connected: {:?}", state));
                 if let WebSocketStatus::Opened = state {
                     self.network.load_inboxes();
                 } else {
@@ -103,12 +109,21 @@ impl Component for Model {
             }
             Msg::DataReceived(DataResult(Ok(msg))) => self.handle_server_message(msg),
             Msg::DataReceived(DataResult(Err(e))) => {
-                ConsoleService::new().error(&format!("Connection to server failed: {:?}", e));
+                self.console
+                    .error(&format!("Connection to server failed: {:?}", e));
                 self.disconnect_and_reconnect_network();
                 false
             }
             Msg::AttemptLogin(request) => {
                 self.network.attempt_login(request);
+                false
+            }
+            Msg::EmailSelected(index) => {
+                if let State::Authenticated(state) = &mut self.state {
+                    if let Some(email) = &state.emails.get(index) {
+                        self.network.load_email(email);
+                    }
+                }
                 false
             }
         }
@@ -118,6 +133,11 @@ impl Component for Model {
 impl Model {
     fn handle_server_message(&mut self, msg: ServerToClient) -> ShouldRender {
         match msg {
+            ServerToClient::Version(version) => {
+                self.console
+                    .log(&format!("Server version is {:?}", version));
+                false
+            }
             ServerToClient::Error(e) => {
                 self.state = State::NotAuthenticated { error: Some(e) };
                 true
@@ -137,9 +157,32 @@ impl Model {
                     true
                 }
             },
-            x => {
-                ConsoleService::new().error(&format!("Not implemented: {:?}", x));
+            ServerToClient::LoadInboxResponse(response) => {
+                if let State::Authenticated(model) = &mut self.state {
+                    if let Some(inbox) = &model.current_inbox {
+                        if inbox.id == response.inbox.id {
+                            model.emails = response.emails.into_iter().map(Rc::new).collect();
+                            return true;
+                        }
+                    }
+                }
                 false
+            }
+            ServerToClient::LoadEmailResponse(response) => {
+                if let State::Authenticated(model) = &mut self.state {
+                    model.current_email = Some(Rc::new(*response));
+                    return true;
+                }
+                false
+            }
+            ServerToClient::NewEmail(email) => {
+                self.console.log(&format!("NewEmail: {:?}", email));
+                true
+            }
+            ServerToClient::LoadAttachmentResponse(response) => {
+                self.console
+                    .log(&format!("LoadAttachmentResponse: {:?}", response));
+                true
             }
         }
     }
@@ -150,31 +193,71 @@ impl Model {
             TimeoutService::new().spawn(Duration::from_secs(5), self.reconnect_callback.clone());
         self.reconnect_timeout = Some(task);
     }
+
+    fn render_emails(&self, state: &AuthenticatedModel, _inbox: &Inbox) -> Html<Self> {
+        if state.emails.is_empty() {
+            html! {
+                <b>{ "Inbox is empty" }</b>
+            }
+        } else {
+            let display = if let Some(email) = &state.current_email {
+                html! {
+                    <EmailDisplay:
+                        email=Some(email.clone()),
+                    />
+                }
+            } else {
+                html! {
+                    <></>
+                }
+            };
+            html! {
+                <div class="row", >
+                    <div class={if state.current_email.is_some() { "col-md-4" } else { "" }}, >
+                        <EmailList:
+                            emails=state.emails.clone(),
+                            email_selected=Msg::EmailSelected,
+                        />
+                    </div>
+                    <div class="col-md-8", >
+                        {display}
+                    </div>
+                </div>
+            }
+        }
+    }
+
+    fn render_inboxes(&self, state: &AuthenticatedModel) -> Html<Self> {
+        if let Some(inbox) = &state.current_inbox {
+            html! {
+                <>
+                    <div>
+                        <InboxList:
+                            inboxes=state.inboxes.clone(),
+                            on_select=Msg::SelectInbox,
+                            current=Some(inbox.clone()),
+                        />
+                    </div>
+                    <div>
+                        {self.render_emails(state, inbox)}
+                    </div>
+                </>
+            }
+        } else {
+            html!{
+                <InboxBlocks:
+                    inboxes=state.inboxes.clone(),
+                    on_select=Msg::SelectInbox,
+                />
+            }
+        }
+    }
 }
 
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         match &self.state {
-            State::Authenticated(state) => {
-                if let Some(inbox) = &state.current_inbox {
-                    html! {
-                        <>
-                            <InboxList:
-                                inboxes=state.inboxes.clone(),
-                                on_select=Msg::SelectInbox,
-                                current=Some(inbox.clone()),
-                            />
-                        </>
-                    }
-                } else {
-                    html!{
-                        <InboxBlocks:
-                            inboxes=state.inboxes.clone(),
-                            on_select=Msg::SelectInbox,
-                        />
-                    }
-                }
-            }
+            State::Authenticated(state) => self.render_inboxes(state),
             State::NotAuthenticated { error } => {
                 html! {
                     <Login:

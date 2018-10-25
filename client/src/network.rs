@@ -2,6 +2,7 @@ use bincode;
 use crate::{Model, Msg};
 use failure::Error;
 use serde::{Deserialize, Serialize};
+use shared::email::{EmailHeader, LoadEmailRequest};
 use shared::inbox::{Inbox, LoadInboxRequest};
 use shared::login::LoginRequest;
 use shared::{ClientToServer, ServerToClient, CLIENT_TO_SERVER_VERSION};
@@ -90,16 +91,20 @@ impl Network {
             task.send_binary(Send(ClientToServer::LoadInbox(
                 LoadInboxRequest { id: inbox.id }.into(),
             )));
-
-            task.send_binary(Send(ClientToServer::LoadInbox(Box::new(
-                LoadInboxRequest { id: inbox.id },
-            ))));
         }
     }
 
     pub fn attempt_login(&mut self, request: LoginRequest) {
         if let Some(task) = &mut self.task {
             task.send_binary(Send(ClientToServer::Authenticate(request.into())));
+        }
+    }
+
+    pub fn load_email(&mut self, email: &EmailHeader) {
+        if let Some(task) = &mut self.task {
+            task.send_binary(Send(ClientToServer::LoadEmail(
+                LoadEmailRequest { id: email.id }.into(),
+            )));
         }
     }
 }

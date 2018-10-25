@@ -1,7 +1,6 @@
 use shared::login::LoginRequest;
 use std::mem;
 use yew::prelude::*;
-use yew::services::ConsoleService;
 
 pub enum Msg {
     Nope,
@@ -56,7 +55,7 @@ impl Component for Login {
                         on_reset_error_message.emit(());
                     }
                 }
-                false
+                true
             }
             Msg::PasswordChanged(pw) => {
                 self.password = pw;
@@ -65,7 +64,7 @@ impl Component for Login {
                         on_reset_error_message.emit(());
                     }
                 }
-                false
+                true
             }
             Msg::Submit => {
                 let request = LoginRequest {
@@ -73,7 +72,6 @@ impl Component for Login {
                     password: mem::replace(&mut self.password, String::new()),
                 };
 
-                ConsoleService::new().log(&format!("{:?}", request));
                 if let Some(on_attempt_login) = &self.on_attempt_login {
                     on_attempt_login.emit(request);
                 }
