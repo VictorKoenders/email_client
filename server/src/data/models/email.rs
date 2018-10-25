@@ -105,7 +105,7 @@ impl<'a> EmailFromImap<'a> {
                 imap_index: message.imap_index,
                 from: &message.from,
                 to: &message.to,
-                subject: &message.to,
+                subject: &message.subject,
                 text_plain_body: &message.plain_text_body,
                 html_body: message.html_body.as_ref().map(|s| s.as_str()),
                 html_body_raw: message.html_body_raw.as_ref().map(|s| s.as_str()),
