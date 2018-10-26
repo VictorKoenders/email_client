@@ -168,7 +168,21 @@ impl Model {
             }
             ServerToClient::LoadEmailResponse(response) => {
                 if let State::Authenticated(model) = &mut self.state {
-                    self.console.log(&format!("{:#?}", response));
+                    for email in &mut model.emails {
+                        if email.id == response.id {
+                            if !email.read {
+                                let mut cloned: EmailHeader = email.as_ref().clone();
+                                cloned.read = true;
+                                *email = Rc::new(cloned);
+
+                                let mut current_inbox =
+                                    model.current_inbox.as_ref().unwrap().as_ref().clone();
+                                current_inbox.unread_count -= 1;
+                                model.current_inbox = Some(Rc::new(current_inbox));
+                            }
+                            break;
+                        }
+                    }
                     model.current_email = Some(Rc::new(*response));
                     return true;
                 }
@@ -216,13 +230,15 @@ impl Model {
             };
             html! {
                 <div class="row", >
-                    <div class={if state.current_email.is_some() { "col-md-4" } else { "" }}, >
+                    <div class={if state.current_email.is_some() { "col-md-4" } else { "" }},
+                        style="overflow-y: auto", >
                         <EmailList:
                             emails=state.emails.clone(),
                             email_selected=Msg::EmailSelected,
                         />
                     </div>
-                    <div class="col-md-8", >
+                    <div class="col-md-8",
+                        style="overflow-y: auto", >
                         {display}
                     </div>
                 </div>
@@ -241,7 +257,7 @@ impl Model {
                             current=Some(inbox.clone()),
                         />
                     </div>
-                    <div>
+                    <div class="d-flex flex-row", >
                         {self.render_emails(state, inbox)}
                     </div>
                 </>

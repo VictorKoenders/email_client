@@ -68,7 +68,7 @@ impl EmailList {
             "No subject"
         };
         html! {
-            <li onclick=|_|Msg::EmailClicked(index), >
+            <li onclick=|_|Msg::EmailClicked(index), class={if email.read { "" } else { "font-weight-bold" }}, >
                 {from} {" -> "} {to}<br />
                 {subject}
             </li>
