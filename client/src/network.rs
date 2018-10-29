@@ -7,6 +7,7 @@ use shared::inbox::{Inbox, LoadInboxRequest};
 use shared::login::LoginRequest;
 use shared::{ClientToServer, ServerToClient, CLIENT_TO_SERVER_VERSION};
 use std::fmt;
+use stdweb::web::document;
 use yew::prelude::*;
 use yew::services::websocket::*;
 
@@ -55,7 +56,7 @@ pub struct Network {
 impl Network {
     pub fn create(link: &mut ComponentLink<Model>) -> Self {
         let service = WebSocketService::new();
-        let connect_callback = link.send_back(Msg::Connected);
+        let connect_callback = link.send_back(Msg::NetworkStatusChanged);
         let data_callback = link.send_back(Msg::DataReceived);
 
         let mut network = Network {
@@ -73,8 +74,10 @@ impl Network {
     }
 
     pub fn reconnect(&mut self) {
+        let location = document().location().unwrap();
+        let path = format!("ws://{}:8001/ws/", location.hostname().unwrap());
         self.task = Some(self.service.connect(
-            "ws://localhost:8001/ws/",
+            &path,
             self.data_callback.clone(),
             self.connect_callback.clone(),
         ));

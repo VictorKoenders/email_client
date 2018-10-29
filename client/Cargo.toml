@@ -6,6 +6,7 @@ version = "0.1.0"
 
 [dependencies]
 yew = { git = "https://github.com/DenisKolodin/yew", rev = "33ebfcbe5e5fe4dda97a9cadd1e6bb4e9483018a" }
+stdweb = "0.4.9"
 failure = "0.1.3"
 serde = "1.0.80"
 bincode = "1.0.1"

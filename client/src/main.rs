@@ -2,6 +2,8 @@
 
 #[macro_use]
 extern crate yew;
+#[macro_use]
+extern crate stdweb;
 
 mod network;
 mod ui;
@@ -50,7 +52,7 @@ pub enum Msg {
     EditInbox(usize),
     Reconnect,
     ResetAuthenticationError,
-    Connected(WebSocketStatus),
+    NetworkStatusChanged(WebSocketStatus),
     DataReceived(DataResult<ServerToClient>),
     AttemptLogin(LoginRequest),
     EmailSelected(usize),
@@ -98,7 +100,7 @@ impl Component for Model {
                 self.network.reconnect();
                 false
             }
-            Msg::Connected(state) => {
+            Msg::NetworkStatusChanged(state) => {
                 if let WebSocketStatus::Opened = state {
                     false
                 } else {
