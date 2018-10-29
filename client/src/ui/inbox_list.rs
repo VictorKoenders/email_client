@@ -63,7 +63,7 @@ impl Renderable<InboxList> for InboxList {
 fn inbox_tile(index: usize, inbox: &Rc<Inbox>, current: &Option<Rc<Inbox>>) -> Html<InboxList> {
     let is_active = Some(inbox) == current.as_ref();
     html! {
-        <li onclick=|_| Msg::InboxClicked(index), >
+        <li onclick=|_| Msg::InboxClicked(index), class="hoverable", >
             {if is_active {
                 html! { <b>{&inbox.name}</b> }
             } else {

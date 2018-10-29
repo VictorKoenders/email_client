@@ -68,7 +68,10 @@ impl EmailList {
             "No subject"
         };
         html! {
-            <li onclick=|_|Msg::EmailClicked(index), class={if email.read { "" } else { "font-weight-bold" }}, >
+            <li
+                onclick=|_|Msg::EmailClicked(index),
+                class=({if email.read { "" } else { "font-weight-bold" }}, "hoverable"),
+                >
                 {from} {" -> "} {to}<br />
                 {subject}
             </li>

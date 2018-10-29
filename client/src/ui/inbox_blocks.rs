@@ -61,7 +61,7 @@ impl Renderable<InboxBlocks> for InboxBlocks {
 
 fn block_menu_tile((index, inbox): (usize, &Rc<Inbox>)) -> Html<InboxBlocks> {
     html! {
-        <div class=("card"), onclick=|_| Msg::SelectInbox(index), >
+        <div class=("card", "hoverable"), onclick=|_| Msg::SelectInbox(index), >
             <div class="card-body", >
                 <span class=("float-right", "oi", "oi-cog"), style="cursor: pointer", onclick=|_| Msg::EditInbox(index), />
                 <h5 class=(if inbox.unread_count > 0 { "font-weight-bold" } else { "" }, "card-title"), >
