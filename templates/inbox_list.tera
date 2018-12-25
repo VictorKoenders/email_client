@@ -1,0 +1,9 @@
+{% extends "_layout" %}
+{% block content %}
+<h1>Inboxes</h1>
+<ul>
+    {% for inbox in inboxes %}
+    <li><a href="/i/{{inbox.id}}">{{inbox.name}}</a></li>
+    {% endfor %}
+</ul>
+{% endblock %}
