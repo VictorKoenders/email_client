@@ -1,3 +1,4 @@
+use super::email_attachment::EmailAttachmentHeader;
 use crate::schema::email;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
@@ -11,6 +12,7 @@ pub struct EmailHeader {
     pub to: Option<String>,
     pub subject: Option<String>,
     pub created_on: DateTime<Utc>,
+    pub read: bool,
 }
 
 impl EmailHeader {
@@ -25,6 +27,7 @@ impl EmailHeader {
                 email::dsl::to,
                 email::dsl::subject,
                 email::dsl::created_on,
+                email::dsl::read,
             ))
             .filter(email::dsl::inbox_id.eq(id))
             .order_by(email::dsl::created_on.desc())
@@ -66,5 +69,20 @@ impl Email {
         conn: &diesel::PgConnection,
     ) -> Result<HashMap<String, String>, failure::Error> {
         super::email_header::EmailHeader::load_by_email(conn, self.id)
+    }
+
+    pub fn load_attachment_headers(
+        &self,
+        conn: &diesel::PgConnection,
+    ) -> Result<Vec<EmailAttachmentHeader>, failure::Error> {
+        EmailAttachmentHeader::load_by_email(conn, self.id)
+    }
+
+    pub fn set_read(&mut self, conn: &diesel::PgConnection) -> Result<(), failure::Error> {
+        diesel::update(email::table.find(self.id))
+            .set(email::dsl::read.eq(true))
+            .execute(conn)?;
+        self.read = true;
+        Ok(())
     }
 }

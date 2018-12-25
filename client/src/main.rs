@@ -18,11 +18,13 @@ mod tera_utils;
 
 use crate::either::Either;
 use crate::models::email::{Email, EmailHeader};
+use crate::models::email_attachment::{EmailAttachment, EmailAttachmentHeader};
 use crate::models::inbox::Inbox;
 use crate::models::user::User;
-use rocket::http::{Cookie, Cookies};
+use failure::bail;
+use rocket::http::{ContentType, Cookie, Cookies, Status};
 use rocket::request::Form;
-use rocket::response::Redirect;
+use rocket::response::{Redirect, Response};
 use rocket_contrib::databases::diesel::PgConnection;
 use rocket_contrib::serve::StaticFiles;
 use rocket_contrib::templates::Template;
@@ -69,28 +71,41 @@ pub struct EmailListModel {
     pub emails: Vec<EmailHeader>,
 }
 
-#[get("/e/<email_id>")]
-fn email_view(
-    _user: User,
+fn do_view_email(
     email_id: String,
     db: Database,
+    force_html: bool,
 ) -> Result<Either<Template, Redirect>, failure::Error> {
-    let email = match Uuid::parse_str(&email_id).map(|u| Email::load_by_id(&db, u)) {
+    let mut email = match Uuid::parse_str(&email_id).map(|u| Email::load_by_id(&db, u)) {
         Ok(Ok(Some(e))) => e,
         Err(_) | Ok(Ok(None)) => return Ok(Either::Right(Redirect::to("/"))),
         Ok(Err(e)) => return Err(e),
     };
 
+    if !email.read {
+        email.set_read(&db)?;
+    }
+
     let headers = email.load_headers(&db)?;
+    let attachments = email.load_attachment_headers(&db)?;
 
     Ok(Either::Left(Template::render(
         "email_view",
         &EmailViewModel {
             email,
             headers,
-            force_html: false,
+            attachments,
+            force_html,
         },
     )))
+}
+#[get("/e/<email_id>")]
+fn email_view(
+    _user: User,
+    email_id: String,
+    db: Database,
+) -> Result<Either<Template, Redirect>, failure::Error> {
+    do_view_email(email_id, db, false)
 }
 
 #[get("/e/<email_id>/html")]
@@ -99,29 +114,35 @@ fn email_html_view(
     email_id: String,
     db: Database,
 ) -> Result<Either<Template, Redirect>, failure::Error> {
-    let email = match Uuid::parse_str(&email_id).map(|u| Email::load_by_id(&db, u)) {
-        Ok(Ok(Some(e))) => e,
-        Err(_) | Ok(Ok(None)) => return Ok(Either::Right(Redirect::to("/"))),
-        Ok(Err(e)) => return Err(e),
-    };
-
-    let headers = email.load_headers(&db)?;
-
-    Ok(Either::Left(Template::render(
-        "email_view",
-        &EmailViewModel {
-            email,
-            headers,
-            force_html: true,
-        },
-    )))
+    do_view_email(email_id, db, true)
 }
 
 #[derive(Serialize)]
 pub struct EmailViewModel {
     pub email: Email,
     pub headers: HashMap<String, String>,
+    pub attachments: Vec<EmailAttachmentHeader>,
     pub force_html: bool,
+}
+
+#[get("/a/<attachment_id>")]
+fn load_attachment(
+    _user: User,
+    db: Database,
+    attachment_id: String,
+) -> Result<Response<'static>, failure::Error> {
+    let attachment_id = Uuid::parse_str(&attachment_id)?;
+    let attachment = match EmailAttachment::load_by_id(&db, attachment_id)? {
+        Some(a) => a,
+        None => bail!("Attachment not found"),
+    };
+    Ok(Response::build()
+        .status(Status::Ok)
+        .header(
+            ContentType::parse_flexible(&attachment.mime_type).unwrap_or_else(ContentType::default),
+        )
+        .sized_body(std::io::Cursor::new(attachment.contents))
+        .finalize())
 }
 
 #[get("/", rank = 2)]
@@ -170,7 +191,15 @@ fn main() {
         }))
         .mount(
             "/",
-            routes![inbox_list, login, login_submit, email_list, email_view, email_html_view],
+            routes![
+                inbox_list,
+                login,
+                login_submit,
+                email_list,
+                email_view,
+                email_html_view,
+                load_attachment
+            ],
         )
         .mount("/", StaticFiles::from("static"))
         .launch();
