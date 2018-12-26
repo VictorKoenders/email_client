@@ -1,0 +1,11 @@
+[package]
+authors = ["Victor Koenders <victor.koenders@gmail.com>"]
+edition = "2018"
+name = "smtp_server_core"
+version = "0.1.0"
+[dependencies]
+bytes = "*"
+failure = "0.1.3"
+futures = "0.1.25"
+tokio = "0.1.13"
+tokio-io = "0.1.10"

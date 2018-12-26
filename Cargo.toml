@@ -1,5 +1,6 @@
 [workspace]
 members = [
 	"client",
-	"email_interface"
+	"smtp_server_core",
+	"smtp_server_postgres",
 ]

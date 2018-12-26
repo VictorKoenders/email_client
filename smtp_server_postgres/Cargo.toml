@@ -1,7 +1,8 @@
 [package]
-name = "email_interface"
+name = "smtp_server_postgres"
 version = "0.1.0"
 authors = ["Victor Koenders <victor.koenders@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+smtp_server_core = { path = "../smtp_server_core" }
