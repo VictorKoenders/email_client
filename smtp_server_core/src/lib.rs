@@ -55,12 +55,12 @@ where
         let listener = TcpListener::bind(&addr).expect("unable to bind TCP listener");
 
         let handler = self.handler.clone();
-        let config = self.config.clone();
+        let _config = self.config.clone();
         listener
             .incoming()
             .map_err(|e| format_err!("accept failed = {:?}", e))
             .for_each(move |sock| {
-                let handler = handler
+                let _handler = handler
                     .try_lock()
                     .map_err(|e| format_err!("Could not get a handler: {:?}", e))?;
                 let addr = sock.peer_addr().unwrap();

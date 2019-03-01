@@ -1,0 +1,16 @@
+[package]
+name = "postfix_connector"
+version = "0.1.0"
+authors = ["Victor Koenders <victor.koenders@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+failure = "0.1"
+imap = "0.10"
+native-tls = "0.2"
+dotenv = "0.13"
+database = { path = "../database" }
+lettre-openssl111 = "0.9"
+lettre-openssl111_email = "0.9"
+mailparse = "0.6"
+hashbrown = "0.1"

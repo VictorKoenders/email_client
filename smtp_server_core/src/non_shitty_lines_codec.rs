@@ -24,6 +24,12 @@ pub struct LinesCodec {
     is_discarding: bool,
 }
 
+impl Default for LinesCodec {
+    fn default() -> LinesCodec {
+        LinesCodec::new()
+    }
+}
+
 impl LinesCodec {
     /// Returns a `LinesCodec` for splitting up data into lines.
     ///

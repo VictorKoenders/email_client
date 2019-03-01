@@ -1,0 +1,2 @@
+Connecting to "trangar.com:993" (domain: "mail.trangar.com")
+Connected!

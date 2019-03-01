@@ -2,8 +2,6 @@
 #![allow(proc_macro_derive_resolution_fallback)]
 
 #[macro_use]
-extern crate diesel;
-#[macro_use]
 extern crate rocket;
 #[macro_use]
 extern crate rocket_contrib;
@@ -11,16 +9,14 @@ extern crate rocket_contrib;
 extern crate serde_derive;
 
 mod either;
-mod models;
 mod routes;
-mod schema;
 mod tera_utils;
 
 use crate::either::Either;
-use crate::models::email::{Email, EmailHeader};
-use crate::models::email_attachment::{EmailAttachment, EmailAttachmentHeader};
-use crate::models::inbox::Inbox;
-use crate::models::user::User;
+use database::models::email::{Email, EmailHeader};
+use database::models::email_attachment::{EmailAttachment, EmailAttachmentHeader};
+use database::models::inbox::Inbox;
+use database::models::user::User;
 use failure::bail;
 use rocket::http::{ContentType, Cookie, Cookies, Status};
 use rocket::request::Form;

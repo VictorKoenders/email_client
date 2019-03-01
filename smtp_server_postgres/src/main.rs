@@ -9,7 +9,7 @@ fn main() {
 struct Handler {}
 
 impl smtp_server_core::Handler for Handler {
-    fn email_received(&mut self, email: smtp_server_core::Email) -> smtp_server_core::Result<()> {
+    fn email_received(&mut self, _email: smtp_server_core::Email) -> smtp_server_core::Result<()> {
         println!("Email received");
         Ok(())
     }
