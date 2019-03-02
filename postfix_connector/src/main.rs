@@ -116,7 +116,7 @@ fn run() -> Result<!, failure::Error> {
 
     println!("Connected!");
 
-    let connection = PgConnection::establish(&config.database_url)
+    let _connection = PgConnection::establish(&config.database_url)
         .expect("Could not connect to the postgres server");
 
     loop {
@@ -125,7 +125,7 @@ fn run() -> Result<!, failure::Error> {
         for key in result.into_iter() {
             load_imap_message(&mut client, key.uid.unwrap())?;
         }
-        // load_imap_message(&mut client, 146)?;
+        // load_imap_message(&mut client, 82)?;
         // std::thread::sleep(std::time::Duration::from_secs(60));
         std::process::exit(0);
     }
@@ -173,6 +173,7 @@ fn load_imap_message(
     client: &mut imap::Session<SecureStream>,
     key: u32,
 ) -> Result<(), failure::Error> {
+    println!("{:?}", key);
     let messages = client.fetch(&key.to_string(), "RFC822")?;
     assert_eq!(1, messages.len());
     if !Path::new("output").exists() {
@@ -339,7 +340,7 @@ fn save_part(part: &mailparse::ParsedMail, mail: &mut Mail) -> Result<(), failur
             }
         }
         assert!(mail.body_text.is_none());
-        mail.body_html = Some(Attachment {
+        mail.body_text = Some(Attachment {
             headers,
             r#type: AttachmentType::TextPlain,
             file_name: None,
