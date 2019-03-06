@@ -16,7 +16,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-pub type SecureStream = native_tls::TlsStream<std::net::TcpStream>;
+type SecureStream = native_tls::TlsStream<std::net::TcpStream>;
 
 fn main() {
     dotenv::dotenv().expect("Could not parse .env");
@@ -116,25 +116,19 @@ fn run() -> Result<!, failure::Error> {
 
     println!("Connected!");
 
-    let _connection = PgConnection::establish(&config.database_url)
+    let connection = PgConnection::establish(&config.database_url)
         .expect("Could not connect to the postgres server");
 
     loop {
-        // read_messages_from_imap(&mut client, &connection)?;
-        let result = client.fetch("1:*", "UID")?;
-        for key in result.into_iter() {
-            load_imap_message(&mut client, key.uid.unwrap())?;
-        }
+        read_messages_from_imap(&mut client, &connection)?;
+        // let result = client.fetch("1:*", "UID")?;
+        // for key in result.into_iter() {
+        //     load_imap_message(&mut client, key.uid.unwrap())?;
+        // }
         // load_imap_message(&mut client, 82)?;
         // std::thread::sleep(std::time::Duration::from_secs(60));
         std::process::exit(0);
     }
-}
-
-#[derive(Debug)]
-pub struct MailPart {
-    pub headers: HashMap<String, String>,
-    pub body: Vec<u8>,
 }
 
 fn read_messages_from_imap(
@@ -212,7 +206,7 @@ fn load_imap_message(
 }
 
 #[derive(Default, Debug)]
-pub struct Mail {
+struct Mail {
     pub headers: HashMap<String, String>,
     pub body_text: Option<Attachment>,
     pub body_html: Option<Attachment>,
@@ -220,7 +214,7 @@ pub struct Mail {
 }
 
 #[derive(Debug)]
-pub struct Attachment {
+struct Attachment {
     pub headers: HashMap<String, String>,
     pub r#type: AttachmentType,
     pub file_name: Option<String>,
@@ -228,16 +222,14 @@ pub struct Attachment {
 }
 
 #[derive(Debug)]
-pub enum AttachmentType {
+enum AttachmentType {
     TextHtml,
     TextPlain,
     Image,
     Application,
     Message,
-    Unknown,
 }
 
-// TODO: get rid of a lot of the string allocations
 fn save_part(part: &mailparse::ParsedMail, mail: &mut Mail) -> Result<(), failure::Error> {
     let raw_body = part
         .get_body_raw()
@@ -371,63 +363,12 @@ fn slice_in_slice(haystack: &[u8], needle: &[u8]) -> bool {
     false
 }
 
-impl<'a> From<&'a mailparse::ParsedMail<'a>> for MailPart {
-    fn from(mail: &'a mailparse::ParsedMail<'a>) -> MailPart {
-        let body = mail.get_body_raw().expect("Could not decode mail body");
-        let mut part = MailPart {
-            body,
-            headers: HashMap::with_capacity(mail.headers.len()),
-        };
-
-        for header in &mail.headers {
-            part.headers
-                .insert(header.get_key().unwrap(), header.get_value().unwrap());
-        }
-        part
-    }
-}
 fn flatten_parsed_mail<'a>(
     buffer: &mut Vec<&'a mailparse::ParsedMail<'a>>,
     item: &'a mailparse::ParsedMail<'a>,
 ) {
-    buffer.push(item.into());
+    buffer.push(item);
     for child in &item.subparts {
         flatten_parsed_mail(buffer, child);
     }
-}
-
-fn write_part_to_file(
-    key: u32,
-    file: &mut std::fs::File,
-    part: &mailparse::ParsedMail,
-    indent: usize,
-    depth: &mut usize,
-) -> Result<(), failure::Error> {
-    *depth = (*depth).max(indent / 2);
-    let prefix = String::from(" ").repeat(indent);
-    file.write_fmt(format_args!("{}headers:\n", prefix))?;
-    for header in &part.headers {
-        file.write_fmt(format_args!(
-            "{} - {}: {}\n",
-            prefix,
-            header.get_key().unwrap(),
-            header.get_value().unwrap()
-        ))?;
-    }
-    if let Ok(body) = part.get_body() {
-        if !body.is_empty() {
-            file.write_fmt(format_args!("{}{}\n", prefix, body))?;
-        }
-    } else {
-        file.write_fmt(format_args!("{}<body is invalid>\n", prefix))?;
-    }
-    file.write_fmt(format_args!(
-        "{}Sub parts: ({})\n",
-        prefix,
-        part.subparts.len()
-    ))?;
-    for sub in &part.subparts {
-        write_part_to_file(key, file, sub, indent + 2, depth)?;
-    }
-    Ok(())
 }
