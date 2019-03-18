@@ -1,8 +1,6 @@
 [workspace]
 members = [
-	"client",
+	"web",
 	"database",
 	"postfix_connector",
-	"smtp_server_core",
-	"smtp_server_postgres",
 ]

@@ -1,22 +1,8 @@
 table! {
-    email (id) {
-        id -> Uuid,
-        inbox_id -> Uuid,
-        created_on -> Timestamptz,
-        imap_index -> Int4,
-        from -> Nullable<Text>,
-        to -> Nullable<Text>,
-        subject -> Nullable<Text>,
-        text_plain_body -> Nullable<Text>,
-        html_body -> Nullable<Text>,
-        html_body_raw -> Nullable<Text>,
-        raw -> Bytea,
-        read -> Bool,
-    }
-}
+    use diesel::sql_types::*;
+    use crate::email_part::{EmailPartType as Emailparttype};
 
-table! {
-    email_2 (id) {
+    email (id) {
         id -> Uuid,
         imap_index -> Int8,
         body_text_id -> Nullable<Uuid>,
@@ -25,36 +11,12 @@ table! {
 }
 
 table! {
-    email_attachment (id) {
+    use diesel::sql_types::*;
+    use crate::email_part::{EmailPartType as Emailparttype};
+
+    email_header (id) {
         id -> Uuid,
         email_id -> Uuid,
-        mime_type -> Text,
-        name -> Nullable<Text>,
-        content_id -> Nullable<Text>,
-        contents -> Bytea,
-    }
-}
-
-table! {
-    email_attachment_header (email_attachment_id, key) {
-        email_attachment_id -> Uuid,
-        key -> Text,
-        value -> Text,
-    }
-}
-
-table! {
-    email_header (email_id, key) {
-        email_id -> Uuid,
-        key -> Text,
-        value -> Text,
-    }
-}
-
-table! {
-    email_header_2 (id) {
-        id -> Uuid,
-        email_id -> Nullable<Uuid>,
         email_part_id -> Nullable<Uuid>,
         key -> Text,
         value -> Text,
@@ -62,42 +24,72 @@ table! {
 }
 
 table! {
+    use diesel::sql_types::*;
+    use crate::email_part::{EmailPartType as Emailparttype};
+
     email_part (id) {
         id -> Uuid,
         email_id -> Uuid,
+        #[sql_name = "type"]
+        type_ -> Int2,
+        file_name -> Nullable<Text>,
+        body -> Bytea,
     }
 }
 
 table! {
-    inbox (id) {
+    use diesel::sql_types::*;
+    use crate::email_part::{EmailPartType as Emailparttype};
+
+    request_logs (id) {
         id -> Uuid,
-        name -> Text,
+        url -> Text,
+        headers -> Text,
+        response_code -> Nullable<Int4>,
+        response_size_bytes -> Nullable<Int4>,
+        created_on -> Timestamptz,
+        finished_on -> Nullable<Timestamptz>,
     }
 }
 
 table! {
-    inbox_address (inbox_id, address) {
-        inbox_id -> Uuid,
-        address -> Text,
+    use diesel::sql_types::*;
+    use crate::email_part::{EmailPartType as Emailparttype};
+
+    users (id) {
+        id -> Uuid,
+        register_request_id -> Uuid,
+        name -> Text,
+        login_name -> Text,
+        password -> Text,
+        email -> Text,
+        email_confirmed_request_id -> Nullable<Uuid>,
     }
 }
 
-joinable!(email -> inbox (inbox_id));
-joinable!(email_attachment -> email (email_id));
-joinable!(email_attachment_header -> email_attachment (email_attachment_id));
+table! {
+    use diesel::sql_types::*;
+    use crate::email_part::{EmailPartType as Emailparttype};
+
+    user_tokens (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        created_on -> Timestamptz,
+        created_request_id -> Uuid,
+        ip -> Text,
+    }
+}
+
 joinable!(email_header -> email (email_id));
-joinable!(email_header_2 -> email_2 (email_id));
-joinable!(email_header_2 -> email_part (email_part_id));
-joinable!(inbox_address -> inbox (inbox_id));
+joinable!(email_header -> email_part (email_part_id));
+joinable!(user_tokens -> request_logs (created_request_id));
+joinable!(user_tokens -> users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     email,
-    email_2,
-    email_attachment,
-    email_attachment_header,
     email_header,
-    email_header_2,
     email_part,
-    inbox,
-    inbox_address,
+    request_logs,
+    users,
+    user_tokens,
 );

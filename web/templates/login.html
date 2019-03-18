@@ -1,0 +1,30 @@
+{% extends "_layout_no_login.html" %}
+
+{% block title %}Index{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <h2>Log in</h2>
+        <b>{{ error }}</b>
+        <form action="/user/login" method="POST">
+            <div class="form-group row">
+                <label for="login_login_name" class="col-md-4 col-form-label">Login name</label>
+                <div class="col-md-8">
+                    <input type="text" class="form-control" id="login_login_name" name="login_name"
+                        value="{{ login_name }}" />
+                </div>
+            </div>
+            <div class="form-group row">
+                <label for="login_password" class="col-md-4 col-form-label">Password</label>
+                <div class="col-md-8">
+                    <input type="password" class="form-control" id="login_password" name="password" />
+                </div>
+            </div>
+            <div class="row">
+                <button type="submit" class="btn btn-primary col-offset-4">Log in</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

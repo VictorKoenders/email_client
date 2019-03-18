@@ -9,6 +9,7 @@
 #![feature(never_type)]
 
 use database::diesel::{Connection, PgConnection};
+use database::email_part::EmailPartType;
 use failure::{bail, format_err, ResultExt};
 use hashbrown::HashMap;
 use native_tls::TlsConnector;
@@ -17,6 +18,13 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 type SecureStream = native_tls::TlsStream<std::net::TcpStream>;
+type Result<T> = std::result::Result<T, failure::Error>;
+
+mod config;
+mod data;
+
+use config::*;
+use data::*;
 
 fn main() {
     dotenv::dotenv().expect("Could not parse .env");
@@ -27,74 +35,7 @@ fn main() {
     }
 }
 
-macro_rules! get_env {
-    ($name:tt) => {
-        std::env::var(stringify!($name)).expect(concat!("Missing env var ", stringify!($name)))
-    };
-    ($name:tt as $ty:ty) => {
-        std::env::var(stringify!($name))
-            .expect(concat!("Missing env var ", stringify!($name)))
-            .parse::<$ty>()
-            .expect(concat!(stringify!($name), " is not a valid value"))
-    };
-}
-
-struct Config {
-    pub imap: ImapConfig,
-    pub smtp: SmtpConfig,
-    pub database_url: String,
-}
-
-impl Default for Config {
-    fn default() -> Config {
-        Config {
-            imap: ImapConfig::default(),
-            smtp: SmtpConfig::default(),
-            database_url: get_env!(DATABASE_URL),
-        }
-    }
-}
-
-struct ImapConfig {
-    pub domain: String,
-    pub port: u16,
-    pub host: String,
-    pub username: String,
-    pub password: String,
-}
-impl Default for ImapConfig {
-    fn default() -> ImapConfig {
-        ImapConfig {
-            domain: get_env!(IMAP_DOMAIN),
-            port: get_env!(IMAP_PORT as u16),
-            host: get_env!(IMAP_HOST),
-            username: get_env!(IMAP_USERNAME),
-            password: get_env!(IMAP_PASSWORD),
-        }
-    }
-}
-
-struct SmtpConfig {
-    pub domain: String,
-    pub port: u16,
-    pub host: String,
-    pub username: String,
-    pub password: String,
-}
-
-impl Default for SmtpConfig {
-    fn default() -> SmtpConfig {
-        SmtpConfig {
-            domain: get_env!(SMTP_DOMAIN),
-            port: get_env!(SMTP_PORT as u16),
-            host: get_env!(SMTP_HOST),
-            username: get_env!(SMTP_USERNAME),
-            password: get_env!(SMTP_PASSWORD),
-        }
-    }
-}
-
-fn run() -> Result<!, failure::Error> {
+fn run() -> Result<!> {
     let config = Config::default();
 
     let socket_addr = format!("{}:{}", config.imap.host, config.imap.port);
@@ -120,12 +61,16 @@ fn run() -> Result<!, failure::Error> {
         .expect("Could not connect to the postgres server");
 
     loop {
-        read_messages_from_imap(&mut client, &connection)?;
-        // let result = client.fetch("1:*", "UID")?;
-        // for key in result.into_iter() {
-        //     load_imap_message(&mut client, key.uid.unwrap())?;
-        // }
-        // load_imap_message(&mut client, 82)?;
+        // read_messages_from_imap(&mut client, &connection)?;
+        let result = client.fetch("1:*", "UID")?;
+        for key in result.into_iter() {
+            let id = key.uid.unwrap();
+            if let Err(e) = load_imap_message(&mut client, &connection, id) {
+                eprintln!("Could not load imap message {:}", id);
+                eprintln!("{:?}", e);
+            }
+        }
+        // load_imap_message(&mut client, &connection, 82)?;
         // std::thread::sleep(std::time::Duration::from_secs(60));
         std::process::exit(0);
     }
@@ -133,8 +78,8 @@ fn run() -> Result<!, failure::Error> {
 
 fn read_messages_from_imap(
     client: &mut imap::Session<SecureStream>,
-    _connection: &PgConnection,
-) -> Result<(), failure::Error> {
+    connection: &PgConnection,
+) -> Result<()> {
     let result: Vec<u8> = client
         .run_command_and_read_response("SEARCH UNSEEN")
         .context("Could not execute \"SEARCH UNSEEN\"")?;
@@ -156,7 +101,7 @@ fn read_messages_from_imap(
     println!("[MailReader] Parsing IMAP email {:?}", keys);
 
     for key in keys {
-        load_imap_message(client, key)
+        load_imap_message(client, connection, key)
             .with_context(|e| format!("Could not load imap message {}: {:?}", key, e))?;
     }
 
@@ -165,8 +110,9 @@ fn read_messages_from_imap(
 
 fn load_imap_message(
     client: &mut imap::Session<SecureStream>,
+    connection: &PgConnection,
     key: u32,
-) -> Result<(), failure::Error> {
+) -> Result<()> {
     println!("{:?}", key);
     let messages = client.fetch(&key.to_string(), "RFC822")?;
     assert_eq!(1, messages.len());
@@ -188,16 +134,16 @@ fn load_imap_message(
                 let mut flat_mail = Vec::new();
                 flatten_parsed_mail(&mut flat_mail, &mail);
 
-                let mut mail = Mail::default();
+                let mut mail = Mail::new(key as u64);
                 for part in &flat_mail {
                     save_part(part, &mut mail)
                         .with_context(|e| format_err!("Could not save part {:?}: {:?}", part, e))?;
                 }
 
-                std::fs::File::create(&format!("{}/parsed.txt", dir.to_str().unwrap()))
-                    .unwrap()
-                    .write_fmt(format_args!("{:#?}", mail))
-                    .unwrap();
+                if let Err(e) = mail.save(connection) {
+                    eprintln!("Could not save email with IMAP id {}", key);
+                    eprintln!("{:?}", e);
+                }
             }
         }
     }
@@ -205,32 +151,7 @@ fn load_imap_message(
     Ok(())
 }
 
-#[derive(Default, Debug)]
-struct Mail {
-    pub headers: HashMap<String, String>,
-    pub body_text: Option<Attachment>,
-    pub body_html: Option<Attachment>,
-    pub attachments: Vec<Attachment>,
-}
-
-#[derive(Debug)]
-struct Attachment {
-    pub headers: HashMap<String, String>,
-    pub r#type: AttachmentType,
-    pub file_name: Option<String>,
-    pub body: Vec<u8>,
-}
-
-#[derive(Debug)]
-enum AttachmentType {
-    TextHtml,
-    TextPlain,
-    Image,
-    Application,
-    Message,
-}
-
-fn save_part(part: &mailparse::ParsedMail, mail: &mut Mail) -> Result<(), failure::Error> {
+fn save_part(part: &mailparse::ParsedMail, mail: &mut Mail) -> Result<()> {
     let raw_body = part
         .get_body_raw()
         .context("Could not get mail part body")?;
@@ -257,7 +178,7 @@ fn save_part(part: &mailparse::ParsedMail, mail: &mut Mail) -> Result<(), failur
                 assert!(mail.body_html.is_none());
                 mail.body_html = Some(Attachment {
                     headers,
-                    r#type: AttachmentType::TextHtml,
+                    r#type: EmailPartType::TextHtml,
                     file_name: None,
                     body: raw_body,
                 });
@@ -266,7 +187,7 @@ fn save_part(part: &mailparse::ParsedMail, mail: &mut Mail) -> Result<(), failur
                 assert!(mail.body_text.is_none());
                 mail.body_text = Some(Attachment {
                     headers,
-                    r#type: AttachmentType::TextPlain,
+                    r#type: EmailPartType::TextPlain,
                     file_name: None,
                     body: raw_body,
                 });
@@ -275,7 +196,7 @@ fn save_part(part: &mailparse::ParsedMail, mail: &mut Mail) -> Result<(), failur
                 let name = try_get_attachment_name(name);
                 mail.attachments.push(Attachment {
                     headers,
-                    r#type: AttachmentType::Image,
+                    r#type: EmailPartType::Image,
                     file_name: name.map(String::from),
                     body: raw_body,
                 });
@@ -284,7 +205,7 @@ fn save_part(part: &mailparse::ParsedMail, mail: &mut Mail) -> Result<(), failur
                 let name = try_get_attachment_name(name);
                 mail.attachments.push(Attachment {
                     headers,
-                    r#type: AttachmentType::Application,
+                    r#type: EmailPartType::Application,
                     file_name: name.map(String::from),
                     body: raw_body,
                 });
@@ -293,7 +214,7 @@ fn save_part(part: &mailparse::ParsedMail, mail: &mut Mail) -> Result<(), failur
                 let name = try_get_attachment_name(name);
                 mail.attachments.push(Attachment {
                     headers,
-                    r#type: AttachmentType::Message,
+                    r#type: EmailPartType::Message,
                     file_name: name.map(String::from),
                     body: raw_body,
                 });
@@ -324,7 +245,7 @@ fn save_part(part: &mailparse::ParsedMail, mail: &mut Mail) -> Result<(), failur
                 assert!(mail.body_html.is_none());
                 mail.body_html = Some(Attachment {
                     headers,
-                    r#type: AttachmentType::TextHtml,
+                    r#type: EmailPartType::TextHtml,
                     file_name: None,
                     body: body.bytes().collect(),
                 });
@@ -334,7 +255,7 @@ fn save_part(part: &mailparse::ParsedMail, mail: &mut Mail) -> Result<(), failur
         assert!(mail.body_text.is_none());
         mail.body_text = Some(Attachment {
             headers,
-            r#type: AttachmentType::TextPlain,
+            r#type: EmailPartType::TextPlain,
             file_name: None,
             body: body.bytes().collect(),
         });

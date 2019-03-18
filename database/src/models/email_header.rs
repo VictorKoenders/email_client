@@ -1,26 +1,77 @@
+use super::email::Email;
+use super::email_part::EmailPart;
 use crate::schema::email_header;
+use crate::Conn;
 use diesel::prelude::*;
-use std::collections::HashMap;
+use hashbrown::HashMap;
 use uuid::Uuid;
 
+pub struct EmailHeader;
+
+#[derive(Insertable)]
+#[table_name = "email_header"]
+struct EmailHeaderInsert<'a> {
+    email_id: Uuid,
+    email_part_id: Option<Uuid>,
+    key: &'a str,
+    value: &'a str,
+}
+
 #[derive(Queryable)]
-pub struct EmailHeader {
-    pub email_id: Uuid,
-    pub key: String,
-    pub value: String,
+struct EmailHeaderQuery {
+    key: String,
+    value: String,
 }
 
 impl EmailHeader {
-    pub fn load_by_email(
-        conn: &diesel::PgConnection,
-        id: Uuid,
-    ) -> Result<HashMap<String, String>, failure::Error> {
-        let result: Vec<EmailHeader> = email_header::table
-            .filter(email_header::dsl::email_id.eq(id))
-            .get_results(conn)?;
+    pub fn create(
+        conn: &Conn,
+        email: &Email,
+        part: Option<&EmailPart>,
+        key: &str,
+        value: &str,
+    ) -> QueryResult<()> {
+        diesel::insert_into(email_header::table)
+            .values(EmailHeaderInsert {
+                email_id: email.id,
+                email_part_id: part.map(|p| p.id),
+                key,
+                value,
+            })
+            .execute(conn)
+            .map(|_| ())
+    }
 
-        let mut map = HashMap::with_capacity(result.len());
-        for header in result {
+    pub fn load_by_email(conn: &Conn, email: &Email) -> QueryResult<HashMap<String, String>> {
+        let headers: Vec<EmailHeaderQuery> = email_header::table
+            .filter(
+                email_header::dsl::email_id
+                    .eq(email.id)
+                    .and(email_header::dsl::email_part_id.eq(Option::<Uuid>::None)),
+            )
+            .select((email_header::dsl::key, email_header::dsl::value))
+            .get_results(conn)?;
+        let mut map = HashMap::with_capacity(headers.len());
+        for header in headers {
+            map.insert(header.key, header.value);
+        }
+        Ok(map)
+    }
+
+    pub fn load_by_email_part(
+        conn: &Conn,
+        email_part: &EmailPart,
+    ) -> QueryResult<HashMap<String, String>> {
+        let headers: Vec<EmailHeaderQuery> = email_header::table
+            .filter(
+                email_header::dsl::email_id
+                    .eq(email_part.email_id)
+                    .and(email_header::dsl::email_part_id.eq(email_part.id)),
+            )
+            .select((email_header::dsl::key, email_header::dsl::value))
+            .get_results(conn)?;
+        let mut map = HashMap::with_capacity(headers.len());
+        for header in headers {
             map.insert(header.key, header.value);
         }
         Ok(map)
