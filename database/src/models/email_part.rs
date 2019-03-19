@@ -1,11 +1,13 @@
 use super::email::Email;
-use crate::schema::email_part;
+use super::email_header::EmailHeader;
+use crate::schema::{email, email_part};
 use crate::Conn;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::prelude::*;
 use diesel::serialize::ToSql;
 use diesel::sql_types::SmallInt;
+use hashbrown::HashMap;
 use std::io::Write;
 use uuid::Uuid;
 
@@ -43,6 +45,49 @@ impl EmailPart {
                 body,
             })
             .get_result(connection)
+    }
+
+    pub fn load_html_and_text_grouped_by_email(
+        conn: &Conn,
+    ) -> QueryResult<HashMap<Uuid, HashMap<Uuid, EmailPartWithHeaders>>> {
+        let email_parts: Vec<EmailPart> = email_part::table
+            .filter(diesel::dsl::exists(
+                email::table.filter(
+                    email::dsl::body_text_id
+                        .eq(email_part::dsl::id.nullable())
+                        .or(email::dsl::body_html_id.eq(email_part::dsl::id.nullable())),
+                ),
+            ))
+            .get_results(conn)?;
+        let mut headers = EmailHeader::load_html_and_text_part_headers_grouped_by_email_part(conn)?;
+        let mut map = HashMap::new();
+        for part in email_parts {
+            let headers = headers.remove(&part.id).unwrap_or_else(HashMap::new);
+            map.entry(part.email_id)
+                .or_insert_with(HashMap::new)
+                .insert(part.id, EmailPartWithHeaders::new(part, headers));
+        }
+        Ok(map)
+    }
+}
+
+pub struct EmailPartWithHeaders {
+    pub id: Uuid,
+    pub r#type: EmailPartType,
+    pub file_name: Option<String>,
+    pub body: Vec<u8>,
+    pub headers: HashMap<String, String>,
+}
+
+impl EmailPartWithHeaders {
+    pub fn new(part: EmailPart, headers: HashMap<String, String>) -> EmailPartWithHeaders {
+        EmailPartWithHeaders {
+            id: part.id,
+            r#type: part.r#type.into(),
+            file_name: part.file_name,
+            body: part.body,
+            headers,
+        }
     }
 }
 

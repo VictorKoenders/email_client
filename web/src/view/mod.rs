@@ -53,11 +53,6 @@ pub struct IndexModel<'a> {
 pub fn route(r: Rocket) -> Rocket {
     r.mount(
         "/",
-        routes![
-            index,
-            auth::index,
-            auth::logout,
-            auth::login_submit,
-        ],
+        routes![index, auth::index, auth::logout, auth::login_submit,],
     )
 }

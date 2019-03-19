@@ -16,6 +16,18 @@ You have {{ emails.len() }} emails:
                 <dt>{{ key }}</dt>
                 <dl>{{ value }}</dl>
                 {% endfor %}
+                {% if email.body_text.is_some() %}
+                    {% for (key, value) in email.body_text.as_ref().unwrap().headers %}
+                        <dt>{{ key }}</dt>
+                        <dl>{{ value }}</dl>
+                    {% endfor %}
+                {% endif %}
+                {% if email.body_html.is_some() %}
+                    {% for (key, value) in email.body_html.as_ref().unwrap().headers %}
+                        <dt>{{ key }}</dt>
+                        <dl>{{ value }}</dl>
+                    {% endfor %}
+                {% endif %}
             </dl>
         {% endif %}
     </li>

@@ -1,6 +1,6 @@
 use super::email::Email;
 use super::email_part::EmailPart;
-use crate::schema::email_header;
+use crate::schema::{email, email_header};
 use crate::Conn;
 use diesel::prelude::*;
 use hashbrown::HashMap;
@@ -20,9 +20,22 @@ struct EmailHeaderInsert<'a> {
 #[derive(Queryable)]
 struct EmailHeaderQuery {
     email_id: Uuid,
+    email_part_id: Option<Uuid>,
     key: String,
     value: String,
 }
+
+const EMAIL_HEADER_QUERY_SELECT: (
+    email_header::dsl::email_id,
+    email_header::dsl::email_part_id,
+    email_header::dsl::key,
+    email_header::dsl::value,
+) = (
+    email_header::dsl::email_id,
+    email_header::dsl::email_part_id,
+    email_header::dsl::key,
+    email_header::dsl::value,
+);
 
 impl EmailHeader {
     pub fn create(
@@ -48,11 +61,8 @@ impl EmailHeader {
     ) -> QueryResult<HashMap<Uuid, HashMap<String, String>>> {
         let headers: Vec<EmailHeaderQuery> = email_header::table
             .filter(email_header::dsl::email_part_id.is_null())
-            .select((
-                email_header::dsl::email_id,
-                email_header::dsl::key,
-                email_header::dsl::value,
-            )).get_results(conn)?;
+            .select(EMAIL_HEADER_QUERY_SELECT)
+            .get_results(conn)?;
         let mut result = HashMap::new();
         for header in headers {
             result
@@ -70,11 +80,7 @@ impl EmailHeader {
                     .eq(email.id)
                     .and(email_header::dsl::email_part_id.eq(Option::<Uuid>::None)),
             )
-            .select((
-                email_header::dsl::email_id,
-                email_header::dsl::key,
-                email_header::dsl::value,
-            ))
+            .select(EMAIL_HEADER_QUERY_SELECT)
             .get_results(conn)?;
         let mut map = HashMap::with_capacity(headers.len());
         for header in headers {
@@ -93,15 +99,37 @@ impl EmailHeader {
                     .eq(email_part.email_id)
                     .and(email_header::dsl::email_part_id.eq(email_part.id)),
             )
-            .select((
-                email_header::dsl::email_id,
-                email_header::dsl::key,
-                email_header::dsl::value,
-            ))
+            .select(EMAIL_HEADER_QUERY_SELECT)
             .get_results(conn)?;
         let mut map = HashMap::with_capacity(headers.len());
         for header in headers {
             map.insert(header.key, header.value);
+        }
+        Ok(map)
+    }
+
+    pub fn load_html_and_text_part_headers_grouped_by_email_part(
+        conn: &Conn,
+    ) -> QueryResult<HashMap<Uuid, HashMap<String, String>>> {
+        let headers: Vec<EmailHeaderQuery> = email_header::table
+            .filter(diesel::dsl::exists(
+                email::table.filter(
+                    email::dsl::body_text_id
+                        .eq(email_header::dsl::email_part_id.nullable())
+                        .or(email::dsl::body_html_id
+                            .eq(email_header::dsl::email_part_id.nullable())),
+                ),
+            ))
+            .select(EMAIL_HEADER_QUERY_SELECT)
+            .get_results(conn)?;
+
+        let mut map = HashMap::new();
+        for header in headers {
+            if let Some(email_part_id) = header.email_part_id {
+                map.entry(email_part_id)
+                    .or_insert_with(HashMap::new)
+                    .insert(header.key, header.value);
+            }
         }
         Ok(map)
     }
