@@ -1,5 +1,5 @@
 use crate::models::user::User;
-use crate::rocket_utils::{RenderTemplate, ResponseResult};
+use crate::rocket_utils::{Connection, RenderTemplate, ResponseResult};
 use askama::Template;
 use rocket::Rocket;
 
@@ -33,10 +33,11 @@ impl<'a> Header<'a> {
 }
 
 #[get("/")]
-pub fn index(user: User) -> ResponseResult {
+pub fn index(user: User, conn: Connection) -> ResponseResult {
     IndexModel {
         header: Header::new(&user, "/"),
         name: &user.name,
+        emails: database::email::Email::load_all(&conn)?,
     }
     .to_response()
 }
@@ -46,6 +47,7 @@ pub fn index(user: User) -> ResponseResult {
 pub struct IndexModel<'a> {
     header: Header<'a>,
     name: &'a str,
+    emails: Vec<database::email::EmailWithHeaders>,
 }
 
 pub fn route(r: Rocket) -> Rocket {

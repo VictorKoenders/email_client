@@ -24,6 +24,27 @@ pub enum ResponseResult {
     Redirect(String),
 }
 
+impl std::ops::Try for ResponseResult {
+    type Ok = ResponseResult;
+    type Error = failure::Error;
+
+    fn into_result(self) -> std::result::Result<Self, failure::Error> {
+        match self {
+            ResponseResult::Error(e) => Err(e),
+            ResponseResult::Ok(ok) => Ok(ResponseResult::Ok(ok)),
+            ResponseResult::Redirect(str) => Ok(ResponseResult::Redirect(str)),
+        }
+    }
+
+    fn from_error(e: failure::Error) -> Self {
+        ResponseResult::Error(e)
+    }
+
+    fn from_ok(r: ResponseResult) -> ResponseResult {
+        r
+    }
+}
+
 impl ResponseResult {
     pub fn redirect_to(url: &'static str) -> ResponseResult {
         ResponseResult::Redirect(url.to_owned())

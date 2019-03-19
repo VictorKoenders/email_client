@@ -134,9 +134,8 @@ fn load_imap_message(
 
                 let mut mail = Mail::new(key as u64);
                 for part in &flat_mail {
-                    save_part(part, &mut mail).with_context(|e| {
-                        format_err!("Could not save part {:?}: {:?}", part, e)
-                    })?;
+                    save_part(part, &mut mail)
+                        .with_context(|e| format_err!("Could not save part {:?}: {:?}", part, e))?;
                 }
 
                 if let Err(e) = mail.save(connection) {

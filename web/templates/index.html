@@ -3,6 +3,23 @@
 {% block title %}Index{% endblock %}
 
 {% block content %}
-Hello {{ name }}
+Hello {{ name }}<br />
+You have {{ emails.len() }} emails:
+<ul>
+    {% for email in emails %}
+    <li>
+        <b>{{ email.get_subject() }}</b> ({{ email.id }})<br />
+        <small>{{ email.get_from() }} -&gt; {{ email.get_to() }}</small>
+        {% if email.get_subject().trim().is_empty() || email.get_from().trim().is_empty() || email.get_to().trim().is_empty() %}
+            <dl class="dl-horizontal">
+                {% for (key, value) in email.headers %}
+                <dt>{{ key }}</dt>
+                <dl>{{ value }}</dl>
+                {% endfor %}
+            </dl>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
 {% endblock %}
 

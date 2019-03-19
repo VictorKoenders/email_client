@@ -1,4 +1,10 @@
-#![feature(proc_macro_hygiene, decl_macro, never_type, type_alias_enum_variants)]
+#![feature(
+    proc_macro_hygiene,
+    decl_macro,
+    never_type,
+    type_alias_enum_variants,
+    try_trait
+)]
 
 #[macro_use]
 extern crate rocket;
