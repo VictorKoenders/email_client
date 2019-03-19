@@ -13,9 +13,6 @@ use database::email_part::EmailPartType;
 use failure::{bail, format_err, ResultExt};
 use hashbrown::HashMap;
 use native_tls::TlsConnector;
-use std::fs::File;
-use std::io::Write;
-use std::path::{Path, PathBuf};
 
 type SecureStream = native_tls::TlsStream<std::net::TcpStream>;
 type Result<T> = std::result::Result<T, failure::Error>;
@@ -32,6 +29,7 @@ fn main() {
         if let Err(e) = run() {
             println!("{:?}", e);
         }
+        std::thread::sleep(std::time::Duration::from_secs(5));
     }
 }
 
@@ -47,32 +45,32 @@ fn run() -> Result<!> {
 
     let ssl_connector = TlsConnector::builder()
         .build()
-        .expect("Could not instantiate TLS connection");
+        .context("Could not instantiate TLS connection")?;
     let mut client = imap::connect(socket_addr, &config.imap.domain, &ssl_connector)
-        .expect("Could not create a secure client")
+        .context("Could not create a secure client")?
         .login(&config.imap.username, &config.imap.password)
-        .expect("Could not log in");
+        .map_err(|e| format_err!("Could not log in: {:?}", e))?;
 
-    client.select("INBOX").expect("Could not get INBOX");
+    client.select("INBOX").context("Could not get INBOX")?;
 
     println!("Connected!");
 
     let connection = PgConnection::establish(&config.database_url)
-        .expect("Could not connect to the postgres server");
+        .context("Could not connect to the postgres server")?;
 
     loop {
-        // read_messages_from_imap(&mut client, &connection)?;
-        let result = client.fetch("1:*", "UID")?;
+        read_messages_from_imap(&mut client, &connection)?;
+        /*let result = client.fetch("1:*", "UID")?;
         for key in result.into_iter() {
             let id = key.uid.unwrap();
             if let Err(e) = load_imap_message(&mut client, &connection, id) {
                 eprintln!("Could not load imap message {:}", id);
                 eprintln!("{:?}", e);
             }
-        }
+        }*/
         // load_imap_message(&mut client, &connection, 82)?;
-        // std::thread::sleep(std::time::Duration::from_secs(60));
-        std::process::exit(0);
+        std::thread::sleep(std::time::Duration::from_secs(60));
+        // std::process::exit(0);
     }
 }
 
@@ -98,11 +96,13 @@ fn read_messages_from_imap(
     if keys.is_empty() {
         return Ok(());
     }
-    println!("[MailReader] Parsing IMAP email {:?}", keys);
+    println!("[MailReader] Parsing IMAP emails {:?}", keys);
 
     for key in keys {
-        load_imap_message(client, connection, key)
-            .with_context(|e| format!("Could not load imap message {}: {:?}", key, e))?;
+        if let Err(e) = load_imap_message(client, connection, key) {
+            eprintln!("Could not load imap message {}", key);
+            eprintln!("{:?}", e);
+        }
     }
 
     Ok(())
@@ -111,33 +111,32 @@ fn read_messages_from_imap(
 fn load_imap_message(
     client: &mut imap::Session<SecureStream>,
     connection: &PgConnection,
-    key: u32,
+    key: i64,
 ) -> Result<()> {
     println!("{:?}", key);
     let messages = client.fetch(&key.to_string(), "RFC822")?;
-    assert_eq!(1, messages.len());
-    if !Path::new("output").exists() {
-        std::fs::create_dir("output")?;
+    if messages.len() != 1 {
+        bail!(
+            "Could not parse imap message {}; expected 1 message, got {}",
+            key,
+            messages.len()
+        );
     }
-    for message in &messages {
-        let dir = PathBuf::from(format!("output/{}", key));
-        if dir.exists() {
-            std::fs::remove_dir_all(&dir)?;
-        }
-        std::fs::create_dir(&dir)?;
-        File::create(&format!("{}/raw.txt", dir.to_str().unwrap()))
-            .unwrap()
-            .write_all(message.body().unwrap())
-            .unwrap();
-        if let Some(body) = message.body() {
-            if let Ok(mail) = mailparse::parse_mail(body) {
+
+    // this will never fail because we check for messages.len() above
+    let message = messages.into_iter().next().unwrap();
+
+    if let Some(body) = message.body() {
+        match mailparse::parse_mail(body) {
+            Ok(mail) => {
                 let mut flat_mail = Vec::new();
                 flatten_parsed_mail(&mut flat_mail, &mail);
 
                 let mut mail = Mail::new(key as u64);
                 for part in &flat_mail {
-                    save_part(part, &mut mail)
-                        .with_context(|e| format_err!("Could not save part {:?}: {:?}", part, e))?;
+                    save_part(part, &mut mail).with_context(|e| {
+                        format_err!("Could not save part {:?}: {:?}", part, e)
+                    })?;
                 }
 
                 if let Err(e) = mail.save(connection) {
@@ -145,7 +144,13 @@ fn load_imap_message(
                     eprintln!("{:?}", e);
                 }
             }
+            Err(e) => {
+                eprintln!("Could not parse Imap message {}", key);
+                eprintln!("{:?}", e);
+            }
         }
+    } else {
+        eprintln!("Imap message {} has no body", key);
     }
 
     Ok(())
