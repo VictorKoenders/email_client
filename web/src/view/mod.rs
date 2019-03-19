@@ -58,7 +58,6 @@ pub fn route(r: Rocket) -> Rocket {
             auth::index,
             auth::logout,
             auth::login_submit,
-            auth::register_submit
         ],
     )
 }

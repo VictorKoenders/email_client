@@ -46,55 +46,6 @@ pub fn login_submit(
     ResponseResult::redirect_to("/")
 }
 
-#[post("/user/register", data = "<form>")]
-pub fn register_submit(
-    form: Form<RegisterSubmitModel>,
-    conn: Connection,
-    mut cookies: Cookies,
-    request_id: RequestId,
-    ip: PeerAddr,
-) -> ResponseResult {
-    let error_form = |e: &str| {
-        RegisterViewModel {
-            error: e,
-            login_name: form.login_name.as_str(),
-            email: form.email.as_str(),
-        }
-        .to_response()
-    };
-    if form.password != form.repeat_password {
-        return error_form("Passwords don't match");
-    }
-    if User::load_by_login_name(&conn, &form.login_name).is_ok() {
-        return error_form("Name already in use");
-    }
-    if User::load_by_email(&conn, &form.email).is_ok() {
-        return error_form("Email already in use");
-    }
-
-    let user = match User::register(
-        &conn,
-        &form.login_name,
-        &form.password,
-        &form.email,
-        request_id.0,
-    ) {
-        Err(e) => {
-            return error_form(e.to_string().as_str());
-        }
-        Ok(u) => u,
-    };
-    let token = match Token::create_for_user(conn.get(), user.id, request_id.0, &ip.0.to_string()) {
-        Ok(token) => token,
-        Err(e) => return error_form(e.to_string().as_str()),
-    };
-
-    cookies.add_private(Cookie::new("UID", user.id.to_string()));
-    cookies.add_private(Cookie::new("TID", token.id.to_string()));
-
-    ResponseResult::redirect_to("/")
-}
-
 #[derive(Template, Default)]
 #[template(path = "landing_page.html")]
 pub struct IndexModel;
@@ -110,22 +61,6 @@ pub struct LoginViewModel<'a> {
 pub struct LoginSubmitModel {
     pub login_name: String,
     pub password: String,
-}
-
-#[derive(Template, Default)]
-#[template(path = "register.html")]
-pub struct RegisterViewModel<'a> {
-    pub error: &'a str,
-    pub login_name: &'a str,
-    pub email: &'a str,
-}
-
-#[derive(FromForm)]
-pub struct RegisterSubmitModel {
-    pub login_name: String,
-    pub password: String,
-    pub repeat_password: String,
-    pub email: String,
 }
 
 pub enum LoginResult {
