@@ -7,6 +7,7 @@ table! {
         imap_index -> Int8,
         body_text_id -> Nullable<Uuid>,
         body_html_id -> Nullable<Uuid>,
+        is_read -> Bool,
     }
 }
 
@@ -34,6 +35,27 @@ table! {
         type_ -> Int2,
         file_name -> Nullable<Text>,
         body -> Bytea,
+    }
+}
+
+table! {
+    use diesel::sql_types::*;
+    use crate::email_part::{EmailPartType as Emailparttype};
+
+    inbox (id) {
+        id -> Uuid,
+        name -> Text,
+    }
+}
+
+table! {
+    use diesel::sql_types::*;
+    use crate::email_part::{EmailPartType as Emailparttype};
+
+    inbox_pattern (id) {
+        id -> Uuid,
+        inbox_id -> Uuid,
+        pattern -> Text,
     }
 }
 
@@ -82,6 +104,7 @@ table! {
 
 joinable!(email_header -> email (email_id));
 joinable!(email_header -> email_part (email_part_id));
+joinable!(inbox_pattern -> inbox (inbox_id));
 joinable!(user_tokens -> request_logs (created_request_id));
 joinable!(user_tokens -> users (user_id));
 
@@ -89,6 +112,8 @@ allow_tables_to_appear_in_same_query!(
     email,
     email_header,
     email_part,
+    inbox,
+    inbox_pattern,
     request_logs,
     users,
     user_tokens,

@@ -62,12 +62,23 @@ impl EmailPart {
         let mut headers = EmailHeader::load_html_and_text_part_headers_grouped_by_email_part(conn)?;
         let mut map = HashMap::new();
         for part in email_parts {
-            let headers = headers.remove(&part.id).unwrap_or_else(HashMap::new);
+            let headers = headers.remove(&part.id).unwrap_or_default();
             map.entry(part.email_id)
                 .or_insert_with(HashMap::new)
                 .insert(part.id, EmailPartWithHeaders::new(part, headers));
         }
         Ok(map)
+    }
+
+    pub fn load_by_email(conn: &Conn, email: &Email) -> QueryResult<HashMap<Uuid, EmailPart>> {
+        let email_parts: Vec<EmailPart> = email_part::table
+            .filter(email_part::dsl::email_id.eq(email.id))
+            .get_results(conn)?;
+        let mut result = HashMap::with_capacity(email_parts.len());
+        for part in email_parts {
+            result.insert(part.id, part);
+        }
+        Ok(result)
     }
 }
 
@@ -87,6 +98,13 @@ impl EmailPartWithHeaders {
             file_name: part.file_name,
             body: part.body,
             headers,
+        }
+    }
+
+    pub fn body_as_str(&self) -> &str {
+        match std::str::from_utf8(&self.body) {
+            Ok(s) => s,
+            Err(e) => "",
         }
     }
 }

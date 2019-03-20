@@ -13,7 +13,7 @@ rocket = "0.4"
 database = { path = "../database" }
 
 [dependencies.rocket_contrib]
-features = ["json", "diesel_postgres_pool"]
+features = ["json", "diesel_postgres_pool", "uuid"]
 version = "0.4"
 
 [dependencies.uuid]

@@ -1,0 +1,25 @@
+{% extends "_layout.html" %}
+
+{% block title %}{{ email.get_subject() }}{% endblock %}
+
+{% block content %}
+{{ email.get_subject() }}
+{% if email.body_text.is_some() && email.body_html.is_some() %}
+    <div>
+        <a href="/e/{{ email.id }}/text">Text</a> - 
+        <a href="/e/{{ email.id }}/html">HTML</a>
+    </div>
+{% endif %}
+{% if show_text %}
+    {% if email.body_text.is_some() %}
+        <pre>
+            {{ email.body_text.as_ref().unwrap().body_as_str() }}
+        </pre>
+    {% endif %}
+{% else %}
+    {% if email.body_html.is_some() %}
+        {{ email.body_html.as_ref().unwrap().body_as_str() }}
+    {% endif %}
+{% endif %}
+{% endblock %}
+

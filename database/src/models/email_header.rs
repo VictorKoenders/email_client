@@ -78,13 +78,30 @@ impl EmailHeader {
             .filter(
                 email_header::dsl::email_id
                     .eq(email.id)
-                    .and(email_header::dsl::email_part_id.eq(Option::<Uuid>::None)),
+                    .and(email_header::dsl::email_part_id.is_null()),
             )
             .select(EMAIL_HEADER_QUERY_SELECT)
             .get_results(conn)?;
         let mut map = HashMap::with_capacity(headers.len());
         for header in headers {
             map.insert(header.key, header.value);
+        }
+        Ok(map)
+    }
+
+    pub fn load_by_email_grouped(
+        conn: &Conn,
+        email: &Email,
+    ) -> QueryResult<HashMap<Option<Uuid>, HashMap<String, String>>> {
+        let headers: Vec<EmailHeaderQuery> = email_header::table
+            .filter(email_header::dsl::email_id.eq(email.id))
+            .select(EMAIL_HEADER_QUERY_SELECT)
+            .get_results(conn)?;
+        let mut map = HashMap::new();
+        for header in headers {
+            map.entry(header.email_part_id)
+                .or_insert_with(HashMap::new)
+                .insert(header.key, header.value);
         }
         Ok(map)
     }
