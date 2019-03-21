@@ -13,6 +13,8 @@ use database::email_part::EmailPartType;
 use failure::{bail, format_err, ResultExt};
 use hashbrown::HashMap;
 use native_tls::TlsConnector;
+#[cfg(test)]
+use proptest::prelude::*;
 
 type SecureStream = native_tls::TlsStream<std::net::TcpStream>;
 type Result<T> = std::result::Result<T, failure::Error>;
@@ -242,7 +244,7 @@ fn save_part(part: &mailparse::ParsedMail, mail: &mut Mail) -> Result<()> {
         }
     } else {
         let body = body
-            .map(|s| s.to_owned())
+            .map(ToOwned::to_owned)
             .unwrap_or_else(|| String::from_utf8_lossy(&raw_body).into_owned());
         if let Some(content_type) = headers.get("content-type") {
             if content_type.starts_with("text/html") {
@@ -280,12 +282,23 @@ fn try_get_attachment_name(name: Option<&str>) -> Option<String> {
 }
 
 fn slice_in_slice(haystack: &[u8], needle: &[u8]) -> bool {
+    if needle.len() > haystack.len() {
+        return false;
+    }
     for i in 0..haystack.len() - needle.len() {
         if &haystack[i..i + needle.len()] == needle {
             return true;
         }
     }
     false
+}
+
+#[cfg(test)]
+proptest! {
+    #[test]
+    fn fuzz_slice_in_slice(haystack: Vec<u8>, needle: Vec<u8>) {
+        slice_in_slice(&haystack, &needle)
+    }
 }
 
 fn flatten_parsed_mail<'a>(

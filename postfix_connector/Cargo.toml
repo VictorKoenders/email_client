@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 failure = "0.1"
-imap = "0.10"
+imap = "1.0"
 native-tls = "0.2"
 dotenv = "0.13"
 database = { path = "../database" }
@@ -14,3 +14,6 @@ lettre-openssl111 = "0.9"
 lettre-openssl111_email = "0.9"
 mailparse = "0.6"
 hashbrown = "0.1"
+
+[dev-dependencies]
+proptest = "0.9.1"
