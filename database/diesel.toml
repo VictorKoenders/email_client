@@ -4,3 +4,4 @@
 [print_schema]
 file = "src/schema.rs"
 import_types = ["diesel::sql_types::*", "crate::email_part::{EmailPartType as Emailparttype}"]
+patch_file = "src/schema.patch"

@@ -1,0 +1,13 @@
+diff --git a/database/src/schema.rs b/database/src/schema.rs
+index 59b0ed1..e5b223c 100644
+--- a/database/src/schema.rs
++++ b/database/src/schema.rs
+@@ -1,6 +1,8 @@
++#![allow(unused_imports)]
++
+ table! {
+     use diesel::sql_types::*;
+     use crate::email_part::{EmailPartType as Emailparttype};
+ 
+     email (id) {
+         id -> Uuid,
