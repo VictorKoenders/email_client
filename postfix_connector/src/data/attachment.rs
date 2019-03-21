@@ -21,7 +21,7 @@ impl Attachment {
             conn,
             &mail,
             self.r#type,
-            self.file_name.as_ref().map(|s| s.as_str()),
+            self.file_name.as_ref().map(String::as_str),
             &self.body,
         )?;
 

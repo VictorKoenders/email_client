@@ -104,7 +104,7 @@ impl EmailPartWithHeaders {
     pub fn body_as_str(&self) -> &str {
         match std::str::from_utf8(&self.body) {
             Ok(s) => s,
-            Err(e) => "",
+            Err(_) => "",
         }
     }
 }
