@@ -1,0 +1,13 @@
+.center_contents {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login_box {
+    width: 600px;
+}
+
+html, body, .center_contents {
+    height: 100%;
+}

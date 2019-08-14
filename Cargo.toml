@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "server",
+    "shared",
+    "web"
+]
+
+[profile.release]
+lto = true
