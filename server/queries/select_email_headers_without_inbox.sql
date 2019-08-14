@@ -3,7 +3,8 @@ SELECT
     subject.value as subject,
     mail.from,
     mail_to.to,
-    mail.received_on
+    mail.received_on,
+    mail.unread
 FROM mail
 LEFT JOIN mail_header AS subject
     ON subject.mail_id = mail.id

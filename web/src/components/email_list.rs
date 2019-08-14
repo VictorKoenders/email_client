@@ -37,8 +37,13 @@ impl Component for EmailList {
 
 impl EmailList {
     fn render_email_header(&self, email: &EmailHeader) -> Html<Self> {
+        let class = if email.unread {
+            "list-group-item list-group-item-action list-group-item-success"
+        } else {
+            "list-group-item list-group-item-action"
+        };
         html! {
-            <a href={format!("#/i/{}", email.id)} class="list-group-item list-group-item-action ">
+            <a href={format!("#/e/{}", email.id)} class=class>
                 <b>{&email.subject}</b><br />
                 <div class="address_small" title={&email.from}>
                     <i class="fas fa-address-book"></i> {" "} <span class="underline-dotted">{&email.from}</span>

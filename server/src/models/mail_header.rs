@@ -9,6 +9,7 @@ pub struct EmailHeader {
     pub from: String,
     pub to: String,
     pub received_on: DateTime<Utc>,
+    pub unread: bool,
 }
 
 #[derive(QueryableByName)]
@@ -23,6 +24,8 @@ struct EmailHeaderQueryable {
     pub to: String,
     #[sql_type = "sql_types::Timestamptz"]
     pub received_on: DateTime<Utc>,
+    #[sql_type = "sql_types::Bool"]
+    pub unread: bool,
 }
 
 impl Into<EmailHeader> for EmailHeaderQueryable {
@@ -33,6 +36,7 @@ impl Into<EmailHeader> for EmailHeaderQueryable {
             from: self.from,
             to: self.to,
             received_on: self.received_on,
+            unread: self.unread,
         }
     }
 }
@@ -63,6 +67,7 @@ impl Into<shared::EmailHeader> for EmailHeader {
             from: self.from,
             to: self.to,
             received_on: self.received_on,
+            unread: self.unread,
         }
     }
 }

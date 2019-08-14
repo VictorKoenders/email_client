@@ -45,7 +45,6 @@ impl Component for Model {
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        ConsoleService::new().log(&format!("{:?}", msg));
         match msg {
             Msg::Login(user) => {
                 self.user = Some(user);

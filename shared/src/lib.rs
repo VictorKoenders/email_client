@@ -21,6 +21,7 @@ impl_default_attributes! {
         pub to: String,
         #[serde(with = "ts_seconds")]
         pub received_on: DateTime<Utc>,
+        pub unread: bool,
     }
 
     pub struct Inbox {
