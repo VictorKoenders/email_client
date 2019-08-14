@@ -1,4 +1,4 @@
-use super::{mail_part::MailPart, schema, Connection, DateTime, Result, Uuid};
+use super::{schema, Connection, DateTime, Result, Uuid};
 use diesel::prelude::*;
 
 pub struct Mail {

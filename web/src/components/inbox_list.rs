@@ -61,7 +61,7 @@ impl InboxList {
 impl Renderable<InboxList> for InboxList {
     fn view(&self) -> Html<Self> {
         html! {
-            <div class="col-3 list-group">
+            <div class="col-2 list-group">
                 { for self.inboxes.iter().map(|i| self.render_inbox(i))}
             </div>
         }

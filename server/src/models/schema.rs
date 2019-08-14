@@ -41,6 +41,7 @@ table! {
         id -> Uuid,
         name -> Text,
         password -> Text,
+        auth_token -> Nullable<Uuid>,
     }
 }
 

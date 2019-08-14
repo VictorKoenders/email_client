@@ -11,12 +11,16 @@ failure = "0.1"
 pbkdf2 = "0.3"
 rocket = "0.4"
 serde_json = "1.0"
-uuid = "0.7"
 time = "0.1"
+itertools = "0.8"
+
+[dependencies.uuid]
+version = "0.7"
+features = ["v4"]
 
 [dependencies.rocket_contrib]
 version = "0.4"
-features = ["diesel_postgres_pool"]
+features = ["diesel_postgres_pool", "uuid"]
 
 [dependencies.diesel]
 features = ["postgres", "chrono", "uuidv07"]

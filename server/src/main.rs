@@ -7,14 +7,20 @@ extern crate diesel;
 #[macro_use]
 extern crate rocket_contrib;
 
-use diesel::Connection;
-use rocket::config::{Config, Environment, Value};
-use rocket_contrib::databases::diesel as rocket_diesel;
-use rocket_contrib::json::Json;
-use std::collections::HashMap;
-
+mod auth;
 mod cors;
 mod models;
+mod utils;
+
+use crate::auth::Auth;
+use diesel::Connection;
+use rocket::config::{Config, Environment, Value};
+use rocket::http::Cookies;
+use rocket_contrib::databases::diesel as rocket_diesel;
+use rocket_contrib::json::Json;
+use rocket_contrib::uuid::Uuid;
+use std::collections::HashMap;
+use utils::VecTools;
 
 pub type Result<T> = std::result::Result<T, failure::Error>;
 
@@ -24,21 +30,37 @@ fn index() -> &'static str {
 }
 
 #[post("/api/v1/login", data = "<login>")]
-fn login(conn: DbConn, login: Json<shared::LoginRequest>) -> Result<Json<shared::LoginResponse>> {
+fn login(
+    conn: DbConn,
+    login: Json<shared::LoginRequest>,
+    mut cookies: Cookies,
+) -> Result<Json<shared::LoginResponse>> {
     let user = models::User::load_by_name(&*conn, &login.name)?;
-    let user = match user {
+    let mut user = match user {
         Some(u) => u,
         None => return Ok(Json(shared::LoginResponse::Failed)),
     };
     if !user.validate_password(&login.password) {
         return Ok(Json(shared::LoginResponse::Failed));
     }
+    let token = user.generate_token(&conn)?;
+    Auth::set_cookie(&mut cookies, token.to_string());
     let inboxes = models::Inbox::load_by_user(&*conn, &user)?;
     Ok(Json(shared::LoginResponse::Success(shared::User {
         id: user.id,
         name: user.name,
-        inboxes: inboxes.into_iter().map(Into::into).collect(),
+        inboxes: inboxes.map_into(),
     })))
+}
+
+#[get("/api/v1/load_inbox?<id>")]
+fn load_inbox_by_id(conn: DbConn, user: Auth, id: Uuid) -> Result<Json<shared::Inbox>> {
+    let inbox = models::Inbox::load_by_id(&conn, &user.0, id.into_inner())?;
+    Ok(Json(shared::Inbox {
+        id: inbox.id,
+        name: inbox.name,
+        emails: inbox.emails.map_into(),
+    }))
 }
 
 #[database("DATABASE_URL")]
@@ -82,6 +104,6 @@ fn main() {
     rocket::custom(config)
         .attach(DbConn::fairing())
         .attach(cors::CORS())
-        .mount("/", routes![index, login])
+        .mount("/", routes![index, login, load_inbox_by_id])
         .launch();
 }

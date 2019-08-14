@@ -1,6 +1,6 @@
-use yew::format::Json;
+use yew::format::{Json, Nothing};
 use yew::prelude::*;
-use yew::services::fetch::{FetchService, FetchTask, Request, Response};
+use yew::services::fetch::{Credentials, FetchOptions, FetchService, FetchTask, Request, Response};
 
 pub struct Fetch<T: for<'a> serde::Deserialize<'a> + 'static> {
     service: FetchService,
@@ -20,6 +20,38 @@ impl<T: for<'a> serde::Deserialize<'a> + 'static> Fetch<T> {
             callback: link.send_back(cb),
             current_fetch_task: None,
         }
+    }
+
+    pub fn get(&mut self, url: &str) {
+        let owned_url = url.to_owned();
+        let post_request = Request::get(&format!("{}{}", crate::BASE_URL, url))
+            .header("Content-Type", "application/json")
+            .body(Nothing)
+            .expect("Failed to build request.");
+
+        let callback = self.callback.clone();
+
+        let handler = move |response: Response<Json<Result<T, failure::Error>>>| {
+            let (meta, Json(data)) = response.into_parts();
+            if meta.status.is_success() {
+                callback.emit(data)
+            } else {
+                callback.emit(Err(failure::format_err!(
+                    "Could not GET {}{}: {}",
+                    crate::BASE_URL,
+                    owned_url,
+                    meta.status
+                )))
+            }
+        };
+        let task = self.service.fetch_with_options(
+            post_request,
+            FetchOptions {
+                credentials: Some(Credentials::Include),
+            },
+            handler.into(),
+        );
+        self.current_fetch_task = Some(task);
     }
 
     pub fn post<U>(&mut self, url: &str, body: U)
@@ -48,7 +80,13 @@ impl<T: for<'a> serde::Deserialize<'a> + 'static> Fetch<T> {
                 )))
             }
         };
-        let task = self.service.fetch(post_request, handler.into());
+        let task = self.service.fetch_with_options(
+            post_request,
+            FetchOptions {
+                credentials: Some(Credentials::Include),
+            },
+            handler.into(),
+        );
         self.current_fetch_task = Some(task);
     }
 

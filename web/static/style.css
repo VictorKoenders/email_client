@@ -11,3 +11,15 @@
 html, body, .center_contents {
     height: 100%;
 }
+
+.address_small {
+    font-size: 75%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.underline-dotted {
+    text-decoration: underline;
+    text-decoration-style: dotted;
+}

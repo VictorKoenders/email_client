@@ -6,6 +6,12 @@ pub enum Lang {
     English,
 }
 
+impl Default for Lang {
+    fn default() -> Lang {
+        Lang::English
+    }
+}
+
 impl Lang {
     pub fn translate(self, key: TKey) -> Cow<'static, str> {
         if let Some(entry) = TRANSLATION.get(&self).and_then(|l| l.get(&key)) {
@@ -14,6 +20,11 @@ impl Lang {
             Cow::from(*entry)
         } else {
             format!("Missing translation {:?}", key).into()
+        }
+    }
+    pub fn date_time_format(self) -> &'static str {
+        match self {
+            Lang::English => "%d %b %Y, %R",
         }
     }
 }
@@ -25,12 +36,6 @@ pub enum TKey {
     LabelLoading,
     LabelUsername,
     LabelInboxCatchAll,
-}
-
-impl Default for Lang {
-    fn default() -> Lang {
-        Lang::English
-    }
 }
 
 macro_rules! map(

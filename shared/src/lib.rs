@@ -20,7 +20,7 @@ impl_default_attributes! {
         pub from: String,
         pub to: String,
         #[serde(with = "ts_seconds")]
-        pub created_on: DateTime<Utc>,
+        pub received_on: DateTime<Utc>,
     }
 
     pub struct Inbox {
