@@ -43,7 +43,7 @@ impl EmailList {
             "list-group-item list-group-item-action"
         };
         html! {
-            <a href={format!("#/e/{}", email.id)} class=class>
+            <a href={format!("#/i/{}/e/{}", email.inbox_id, email.id)} class=class>
                 <b>{&email.subject}</b><br />
                 <div class="address_small" title={&email.from}>
                     <i class="fas fa-address-book"></i> {" "} <span class="underline-dotted">{&email.from}</span>
@@ -62,7 +62,7 @@ impl EmailList {
 impl Renderable<EmailList> for EmailList {
     fn view(&self) -> Html<Self> {
         html! {
-            <div class="col-3 list-group">
+            <div class="col-3 list-group scrollable-column">
                 { for self.emails.iter().map(|i| self.render_email_header(i))}
             </div>
         }

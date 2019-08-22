@@ -24,18 +24,16 @@ impl<'a, 'r> FromRequest<'a, 'r> for Auth {
         {
             Some(id) => id,
             None => {
-                println!("Cookie not set, or could not parse");
+                println!("cookie not found");
                 return Outcome::Failure((
                     Status::Unauthorized,
                     UnauthenticatedError::Unauthorized,
                 ));
             }
         };
-        println!("Id: {:?}", id);
         let db: crate::DbConn = match request.guard() {
             Outcome::Success(d) => d,
             _ => {
-                println!("Database connection not set ");
                 return Outcome::Failure((
                     Status::InternalServerError,
                     UnauthenticatedError::DatabaseConnectionNotFound,
@@ -45,16 +43,13 @@ impl<'a, 'r> FromRequest<'a, 'r> for Auth {
         match User::load_by_token(&db, id) {
             Ok(Some(user)) => Outcome::Success(Auth(user)),
             Ok(None) => {
-                println!("Token not found");
+                println!("user not found");
                 Outcome::Failure((Status::Unauthorized, UnauthenticatedError::Unauthorized))
             }
-            Err(e) => {
-                println!("Query error: {:?}", e);
-                Outcome::Failure((
-                    Status::InternalServerError,
-                    UnauthenticatedError::QueryError(e),
-                ))
-            }
+            Err(e) => Outcome::Failure((
+                Status::InternalServerError,
+                UnauthenticatedError::QueryError(e),
+            )),
         }
     }
 }

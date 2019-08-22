@@ -22,6 +22,7 @@ struct Model {
     inbox: Option<Inbox>,
     email: Option<Email>,
     fetch_load_inbox: Fetch<shared::Inbox>,
+    fetch_load_email: Fetch<shared::Email>,
 }
 
 #[derive(Debug)]
@@ -29,6 +30,7 @@ enum Msg {
     Login(shared::User),
     PathChanged(HashMap<String, String>),
     InboxLoaded(Result<shared::Inbox, failure::Error>),
+    EmailLoaded(Result<shared::Email, failure::Error>),
 }
 
 impl Component for Model {
@@ -41,6 +43,7 @@ impl Component for Model {
             inbox: None,
             email: None,
             fetch_load_inbox: Fetch::new(&mut link, Msg::InboxLoaded),
+            fetch_load_email: Fetch::new(&mut link, Msg::EmailLoaded),
         }
     }
 
@@ -64,10 +67,31 @@ impl Component for Model {
                 for (key, value) in params {
                     match key.as_str() {
                         "i" => {
-                            did_change = self.inbox.is_some();
-                            self.inbox = None;
+                            let is_same = self
+                                .inbox
+                                .as_ref()
+                                .map(|i| i.id.to_string() == value)
+                                .unwrap_or(false);
+                            if !is_same {
+                                self.inbox = None;
+                                self.email = None;
+                                did_change = true;
+                            }
                             self.fetch_load_inbox
                                 .get(&format!("/load_inbox?id={}", value));
+                        }
+                        "e" => {
+                            let is_same = self
+                                .email
+                                .as_ref()
+                                .map(|e| e.id.to_string() == value)
+                                .unwrap_or(false);
+                            if !is_same {
+                                self.email = None;
+                                did_change = true;
+                            }
+                            self.fetch_load_email
+                                .get(&format!("/load_email?id={}", value));
                         }
                         k => ConsoleService::new().log(&format!("Unknown param: {:?}", k)),
                     }
@@ -85,21 +109,48 @@ impl Component for Model {
                 }
                 true
             }
+            Msg::EmailLoaded(email) => {
+                self.fetch_load_email.clear();
+                match email {
+                    Ok(email) => self.email = Some(email),
+                    Err(e) => {
+                        ConsoleService::new().error(&format!("Could not load email: {:?}", e));
+                        self.email = None;
+                    }
+                }
+                true
+            }
         }
     }
 }
 
+impl Model {
+    fn column_spinner(size: usize) -> Html<Self> {
+        yew::html! {
+            <div class={format!("col-{}", size)}>
+                <div class="list-group-item-action list-group-item" style="text-align:center">
+                    <div role="status" class="spinner-border"></div>
+                </div>
+            </div>
+        }
+    }
+}
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
-        use components::{EmailList, InboxList, Login};
+        use components::{EmailList, EmailRender, InboxList, Login};
+
         if let Some(u) = self.user.as_ref() {
             let mut items: Vec<Html<Self>> =
                 vec![yew::html! { <InboxList inboxes=u.inboxes.clone() lang=self.lang /> }];
             if let Some(i) = self.inbox.as_ref() {
                 items.push(yew::html! { <EmailList emails=i.emails.clone() lang=self.lang /> });
                 if let Some(e) = self.email.as_ref() {
-                    items.push(yew::html! { <div class="col-4">{ format!("TODO: Render email {:?}", e)}</div> });
+                    items.push(yew::html! { <EmailRender email=Some(e.clone()) lang=self.lang /> });
+                } else if self.fetch_load_email.running() {
+                    items.push(Model::column_spinner(7))
                 }
+            } else if self.fetch_load_inbox.running() {
+                items.push(Model::column_spinner(3))
             }
 
             html! { <div class="row">{for items.into_iter()}</div>}
@@ -131,7 +182,7 @@ fn parse_location_href(url: &str) -> HashMap<String, String> {
             let path = std::path::Path::new(fragment);
             let mut iter = path.iter();
             while let Some(item) = iter.next().and_then(|i| i.to_str()) {
-                if let "i" = item {
+                if ["i", "e"].contains(&item) {
                     if let Some(val) = iter.next().and_then(|i| i.to_str()) {
                         data.insert(item.to_owned(), val.to_owned());
                     }

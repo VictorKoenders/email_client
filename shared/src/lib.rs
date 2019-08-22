@@ -1,6 +1,13 @@
+#[macro_use]
+extern crate base64_serde;
+extern crate base64;
+
+use base64::STANDARD;
 use chrono::{serde::ts_seconds, DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+pub use uuid::Uuid;
+
+base64_serde_type!(Base64Standard, STANDARD);
 
 macro_rules! impl_default_attributes {
     ($(pub $tt:tt $name:ident {$($inner:tt)*})*) => {
@@ -16,6 +23,7 @@ macro_rules! impl_default_attributes {
 impl_default_attributes! {
     pub struct EmailHeader {
         pub id: Uuid,
+        pub inbox_id: Uuid,
         pub subject: String,
         pub from: String,
         pub to: String,
@@ -53,7 +61,32 @@ impl_default_attributes! {
         pub unread_count: usize,
     }
 
-    pub struct Email {}
+    pub struct Email {
+        pub id: Uuid,
+        pub remote_addr: String,
+        pub ssl: bool,
+        pub from: String,
+        pub to: Vec<String>,
+        #[serde(with = "ts_seconds")]
+        pub received_on: DateTime<Utc>,
+        pub unread: bool,
+
+        pub headers: Vec<EmailSmtpHeader>,
+        pub parts: Vec<EmailPart>,
+    }
+
+    pub struct EmailSmtpHeader {
+        pub mail_part_id: Option<Uuid>,
+        pub key: String,
+        pub value: String,
+    }
+
+    pub struct EmailPart {
+        pub id: Uuid,
+        pub parent_part_id: Option<Uuid>,
+        #[serde(with = "Base64Standard")]
+        pub body: Vec<u8>,
+    }
 }
 
 pub trait ResponseTo<T> {}

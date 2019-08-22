@@ -9,6 +9,7 @@ extern crate rocket_contrib;
 
 mod auth;
 mod cors;
+mod gzip;
 mod models;
 mod utils;
 
@@ -53,6 +54,16 @@ fn login(
     })))
 }
 
+#[get("/api/v1/load_inboxes")]
+fn load_inboxes(conn: DbConn, user: Auth) -> Result<Json<shared::LoginResponse>> {
+    let inboxes = models::Inbox::load_by_user(&*conn, &user.0)?;
+    Ok(Json(shared::LoginResponse::Success(shared::User {
+        id: user.0.id,
+        name: user.0.name,
+        inboxes: inboxes.map_into(),
+    })))
+}
+
 #[get("/api/v1/load_inbox?<id>")]
 fn load_inbox_by_id(conn: DbConn, user: Auth, id: Uuid) -> Result<Json<shared::Inbox>> {
     let inbox = models::Inbox::load_by_id(&conn, &user.0, id.into_inner())?;
@@ -61,6 +72,15 @@ fn load_inbox_by_id(conn: DbConn, user: Auth, id: Uuid) -> Result<Json<shared::I
         name: inbox.name,
         emails: inbox.emails.map_into(),
     }))
+}
+
+#[get("/api/v1/load_email?<id>")]
+fn load_email_by_id(conn: DbConn, _user: Auth, id: Uuid) -> Result<Json<shared::Email>> {
+    let email = models::Mail::load_by_id(&conn, id.into_inner())?;
+    match email {
+        Some(e) => Ok(Json(e.into())),
+        None => failure::bail!("Email not found"),
+    }
 }
 
 #[database("DATABASE_URL")]
@@ -104,6 +124,16 @@ fn main() {
     rocket::custom(config)
         .attach(DbConn::fairing())
         .attach(cors::CORS())
-        .mount("/", routes![index, login, load_inbox_by_id])
+        .attach(gzip::Gzip)
+        .mount(
+            "/",
+            routes![
+                index,
+                login,
+                load_inbox_by_id,
+                load_email_by_id,
+                load_inboxes
+            ],
+        )
         .launch();
 }

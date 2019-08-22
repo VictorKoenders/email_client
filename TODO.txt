@@ -1,0 +1,21 @@
+v0.1:
+
+- load_inboxes endpoint for:
+  - Page load auth
+- Update load_inbox_by_id for:
+  - Auto refresh every 5m
+  - Add a list of inboxes for the `unread_count`
+- Update web client:
+  - Msg::PathChanged: if `e` is present, don't load `i`
+  - Msg::EmailLoaded: load inbox after the email is loaded
+  - Add an interval that calls `load_inbox_by_id` every 5m
+- Send email
+- Make mail_part in mail_renderer collapsible
+
+v0.2:
+
+- mail_render::part:
+  - Show parts as tabs
+  - HTML rendering
+  - Image rendering
+  - Download button (part + entire email)

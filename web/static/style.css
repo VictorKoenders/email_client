@@ -19,7 +19,22 @@ html, body, .center_contents {
     text-overflow: ellipsis;
 }
 
+.overflow {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.preserve-linebreaks {
+    white-space: pre-wrap;
+}
+
 .underline-dotted {
     text-decoration: underline;
     text-decoration-style: dotted;
+}
+
+.scrollable-column {
+    max-height: 100vh;
+    overflow: scroll;
 }

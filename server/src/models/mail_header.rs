@@ -1,10 +1,10 @@
 use super::{Connection, Result, Uuid};
-use crate::utils::VecTools;
 use chrono::{DateTime, Utc};
 use diesel::*;
 
 pub struct EmailHeader {
     pub id: Uuid,
+    pub inbox_id: Uuid,
     pub subject: String,
     pub from: String,
     pub to: String,
@@ -28,10 +28,11 @@ struct EmailHeaderQueryable {
     pub unread: bool,
 }
 
-impl Into<EmailHeader> for EmailHeaderQueryable {
-    fn into(self) -> EmailHeader {
+impl EmailHeaderQueryable {
+    fn into_header(self, inbox_id: uuid::Uuid) -> EmailHeader {
         EmailHeader {
             id: self.id,
+            inbox_id,
             subject: self.subject,
             from: self.from,
             to: self.to,
@@ -55,7 +56,10 @@ impl EmailHeader {
             .bind::<sql_types::Uuid, _>(&inbox_id)
             .get_results(conn)?
         };
-        Ok(headers.map_into())
+        Ok(headers
+            .into_iter()
+            .map(|s| s.into_header(inbox_id))
+            .collect())
     }
 }
 
@@ -63,6 +67,7 @@ impl Into<shared::EmailHeader> for EmailHeader {
     fn into(self) -> shared::EmailHeader {
         shared::EmailHeader {
             id: self.id,
+            inbox_id: self.inbox_id,
             subject: self.subject,
             from: self.from,
             to: self.to,
