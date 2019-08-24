@@ -25,12 +25,12 @@ impl fairing::Fairing for Gzip {
             let new_body = Cursor::new(if body.is_empty() {
                 body
             } else {
-                let old_len = body.len();
+                let old_len = body.len() as isize;
                 let writer = Vec::with_capacity(body.len());
                 let mut encoder = GzEncoder::new(writer, Compression::default());
                 if let Ok(writer) = encoder.write_all(&body).and_then(|()| encoder.finish()) {
                     response.set_raw_header("Content-Encoding", "gzip");
-                    let new_len = writer.len();
+                    let new_len = writer.len() as isize;
                     println!(
                         "gzip compression {}% ({} -> {})",
                         100 - (new_len * 100 / old_len),

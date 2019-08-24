@@ -16,18 +16,20 @@ mod utils;
 use crate::auth::Auth;
 use diesel::Connection;
 use rocket::config::{Config, Environment, Value};
+use rocket::response::NamedFile;
 use rocket::http::Cookies;
 use rocket_contrib::databases::diesel as rocket_diesel;
 use rocket_contrib::json::Json;
 use rocket_contrib::uuid::Uuid;
+use rocket_contrib::serve::StaticFiles;
 use std::collections::HashMap;
 use utils::VecTools;
 
 pub type Result<T> = std::result::Result<T, failure::Error>;
 
 #[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
+fn index() -> std::io::Result<NamedFile> {
+    NamedFile::open("static/index.html")
 }
 
 #[post("/api/v1/login", data = "<login>")]
@@ -117,6 +119,7 @@ fn main() {
 
     let config = Config::build(Environment::Development)
         .extra("databases", databases)
+        .address("0.0.0.0")
         .port(8001)
         .finalize()
         .unwrap();
@@ -125,6 +128,7 @@ fn main() {
         .attach(DbConn::fairing())
         .attach(cors::CORS())
         .attach(gzip::Gzip)
+        .mount("/", StaticFiles::from("static"))
         .mount(
             "/",
             routes![
