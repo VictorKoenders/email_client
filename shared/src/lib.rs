@@ -38,6 +38,11 @@ impl_default_attributes! {
         pub emails: Vec<EmailHeader>,
     }
 
+    pub struct LoadInboxResponse {
+        pub inbox: Inbox,
+        pub inbox_headers: Vec<InboxHeader>,
+    }
+
     pub struct LoginRequest {
         pub name: String,
         pub password: String,

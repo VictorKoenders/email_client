@@ -1,5 +1,6 @@
 v0.1:
 
+Done:
 - load_inboxes endpoint for:
   - Page load auth
 - Update load_inbox_by_id for:
@@ -9,6 +10,8 @@ v0.1:
   - Msg::PathChanged: if `e` is present, don't load `i`
   - Msg::EmailLoaded: load inbox after the email is loaded
   - Add an interval that calls `load_inbox_by_id` every 5m
+
+Todo:
 - Send email
 - Make mail_part in mail_renderer collapsible
 

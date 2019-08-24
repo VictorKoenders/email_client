@@ -9,7 +9,8 @@ use shared::{Email, Inbox, User};
 use std::collections::HashMap;
 use utils::{Fetch, Lang};
 use yew::prelude::*;
-use yew::services::ConsoleService;
+use yew::services::interval::IntervalTask;
+use yew::services::{ConsoleService, IntervalService};
 
 #[cfg(debug_assertions)]
 const BASE_URL: &str = "http://localhost:8001/api/v1";
@@ -21,16 +22,22 @@ struct Model {
     user: Option<User>,
     inbox: Option<Inbox>,
     email: Option<Email>,
-    fetch_load_inbox: Fetch<shared::Inbox>,
+    fetch_load_user: Fetch<shared::LoginResponse>,
+    fetch_load_inbox: Fetch<shared::LoadInboxResponse>,
     fetch_load_email: Fetch<shared::Email>,
+    #[allow(dead_code)]
+    interval_task: IntervalTask,
 }
 
 #[derive(Debug)]
 enum Msg {
     Login(shared::User),
     PathChanged(HashMap<String, String>),
-    InboxLoaded(Result<shared::Inbox, failure::Error>),
+    InboxLoaded(Result<shared::LoadInboxResponse, failure::Error>),
     EmailLoaded(Result<shared::Email, failure::Error>),
+    UserLoaded(Result<shared::LoginResponse, failure::Error>),
+    TryAuth,
+    IntervalTick,
 }
 
 impl Component for Model {
@@ -42,8 +49,13 @@ impl Component for Model {
             user: None,
             inbox: None,
             email: None,
+            fetch_load_user: Fetch::new(&mut link, Msg::UserLoaded),
             fetch_load_inbox: Fetch::new(&mut link, Msg::InboxLoaded),
             fetch_load_email: Fetch::new(&mut link, Msg::EmailLoaded),
+            interval_task: IntervalService::new().spawn(
+                std::time::Duration::from_secs(5 * 60),
+                link.send_back(|_| Msg::IntervalTick),
+            ),
         }
     }
 
@@ -63,45 +75,60 @@ impl Component for Model {
                 true
             }
             Msg::PathChanged(params) => {
-                let mut did_change = false;
-                for (key, value) in params {
-                    match key.as_str() {
-                        "i" => {
-                            let is_same = self
-                                .inbox
-                                .as_ref()
-                                .map(|i| i.id.to_string() == value)
-                                .unwrap_or(false);
-                            if !is_same {
-                                self.inbox = None;
-                                self.email = None;
-                                did_change = true;
-                            }
-                            self.fetch_load_inbox
-                                .get(&format!("/load_inbox?id={}", value));
-                        }
-                        "e" => {
-                            let is_same = self
-                                .email
-                                .as_ref()
-                                .map(|e| e.id.to_string() == value)
-                                .unwrap_or(false);
-                            if !is_same {
-                                self.email = None;
-                                did_change = true;
-                            }
-                            self.fetch_load_email
-                                .get(&format!("/load_email?id={}", value));
-                        }
-                        k => ConsoleService::new().log(&format!("Unknown param: {:?}", k)),
+                if let Some(value) = params.get("e") {
+                    let is_same = self
+                        .email
+                        .as_ref()
+                        .map(|e| &e.id.to_string() == value)
+                        .unwrap_or(false);
+                    if !is_same {
+                        self.email = None;
+                    }
+                    self.fetch_load_email
+                        .get(&format!("/load_email?id={}", value));
+                    !is_same
+                } else if let Some(value) = params.get("i") {
+                    let is_same = self
+                        .inbox
+                        .as_ref()
+                        .map(|i| &i.id.to_string() == value)
+                        .unwrap_or(false);
+                    if !is_same {
+                        self.inbox = None;
+                        self.email = None;
+                    }
+                    self.fetch_load_inbox
+                        .get(&format!("/load_inbox?id={}", value));
+                    !is_same
+                } else {
+                    false
+                }
+            }
+            Msg::UserLoaded(user) => match user {
+                Ok(shared::LoginResponse::Success(user)) => {
+                    self.user = Some(user);
+                    true
+                }
+                _ => {
+                    if self.user.is_some() {
+                        self.user = None;
+                        self.email = None;
+                        self.inbox = None;
+                        true
+                    } else {
+                        false
                     }
                 }
-                did_change
-            }
-            Msg::InboxLoaded(inbox) => {
+            },
+            Msg::InboxLoaded(response) => {
                 self.fetch_load_inbox.clear();
-                match inbox {
-                    Ok(inbox) => self.inbox = Some(inbox),
+                match response {
+                    Ok(response) => {
+                        self.inbox = Some(response.inbox);
+                        if let Some(user) = self.user.as_mut() {
+                            user.inboxes = response.inbox_headers;
+                        }
+                    }
                     Err(e) => {
                         ConsoleService::new().error(&format!("Could not load inbox: {:?}", e));
                         self.inbox = None;
@@ -112,13 +139,31 @@ impl Component for Model {
             Msg::EmailLoaded(email) => {
                 self.fetch_load_email.clear();
                 match email {
-                    Ok(email) => self.email = Some(email),
+                    Ok(email) => {
+                        self.email = Some(email);
+
+                        // reload inbox after the email is loaded
+                        if let Some(i) = self.inbox.as_ref() {
+                            self.fetch_load_inbox
+                                .get(&format!("/load_inbox?id={}", i.id));
+                        }
+                    }
                     Err(e) => {
                         ConsoleService::new().error(&format!("Could not load email: {:?}", e));
                         self.email = None;
                     }
                 }
                 true
+            }
+            Msg::TryAuth => {
+                self.fetch_load_user.get("/try_load_user");
+                false
+            }
+            Msg::IntervalTick => {
+                if !self.fetch_load_user.running() {
+                    self.fetch_load_user.get("/try_load_user");
+                }
+                false
             }
         }
     }
@@ -163,6 +208,7 @@ impl Renderable<Model> for Model {
 fn main() {
     yew::initialize();
     let mut scope = App::<Model>::new().mount_to_body();
+    scope.send_message(Msg::TryAuth);
 
     use stdweb::web::{event, window, IEventTarget};
     window().add_event_listener(move |e: event::HashChangeEvent| {

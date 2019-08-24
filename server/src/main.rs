@@ -16,12 +16,12 @@ mod utils;
 use crate::auth::Auth;
 use diesel::Connection;
 use rocket::config::{Config, Environment, Value};
-use rocket::response::NamedFile;
 use rocket::http::Cookies;
+use rocket::response::NamedFile;
 use rocket_contrib::databases::diesel as rocket_diesel;
 use rocket_contrib::json::Json;
-use rocket_contrib::uuid::Uuid;
 use rocket_contrib::serve::StaticFiles;
+use rocket_contrib::uuid::Uuid;
 use std::collections::HashMap;
 use utils::VecTools;
 
@@ -56,6 +56,20 @@ fn login(
     })))
 }
 
+#[get("/api/v1/try_load_user")]
+fn try_load_user(conn: DbConn, user: Option<Auth>) -> Result<Json<shared::LoginResponse>> {
+    let user = match user {
+        Some(u) => u,
+        None => return Ok(Json(shared::LoginResponse::Failed)),
+    };
+    let inboxes = models::Inbox::load_by_user(&*conn, &user.0)?;
+    Ok(Json(shared::LoginResponse::Success(shared::User {
+        id: user.0.id,
+        name: user.0.name,
+        inboxes: inboxes.map_into(),
+    })))
+}
+
 #[get("/api/v1/load_inboxes")]
 fn load_inboxes(conn: DbConn, user: Auth) -> Result<Json<shared::LoginResponse>> {
     let inboxes = models::Inbox::load_by_user(&*conn, &user.0)?;
@@ -67,12 +81,16 @@ fn load_inboxes(conn: DbConn, user: Auth) -> Result<Json<shared::LoginResponse>>
 }
 
 #[get("/api/v1/load_inbox?<id>")]
-fn load_inbox_by_id(conn: DbConn, user: Auth, id: Uuid) -> Result<Json<shared::Inbox>> {
+fn load_inbox_by_id(conn: DbConn, user: Auth, id: Uuid) -> Result<Json<shared::LoadInboxResponse>> {
     let inbox = models::Inbox::load_by_id(&conn, &user.0, id.into_inner())?;
-    Ok(Json(shared::Inbox {
-        id: inbox.id,
-        name: inbox.name,
-        emails: inbox.emails.map_into(),
+    let inboxes = models::Inbox::load_by_user(&conn, &user.0)?;
+    Ok(Json(shared::LoadInboxResponse {
+        inbox: shared::Inbox {
+            id: inbox.id,
+            name: inbox.name,
+            emails: inbox.emails.map_into(),
+        },
+        inbox_headers: inboxes.map_into(),
     }))
 }
 
@@ -136,7 +154,8 @@ fn main() {
                 login,
                 load_inbox_by_id,
                 load_email_by_id,
-                load_inboxes
+                load_inboxes,
+                try_load_user,
             ],
         )
         .launch();
