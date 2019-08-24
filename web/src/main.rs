@@ -81,25 +81,34 @@ impl Component for Model {
                         .as_ref()
                         .map(|e| &e.id.to_string() == value)
                         .unwrap_or(false);
-                    if !is_same {
-                        self.email = None;
-                    }
                     self.fetch_load_email
                         .get(&format!("/load_email?id={}", value));
-                    !is_same
+
+                    if !is_same {
+                        self.email = None;
+                        true
+                    } else {
+                        false
+                    }
                 } else if let Some(value) = params.get("i") {
                     let is_same = self
                         .inbox
                         .as_ref()
                         .map(|i| &i.id.to_string() == value)
                         .unwrap_or(false);
+                    self.fetch_load_inbox
+                        .get(&format!("/load_inbox?id={}", value));
+
                     if !is_same {
                         self.inbox = None;
                         self.email = None;
+                        true
+                    } else if self.email.is_some() {
+                        self.email = None;
+                        true
+                    } else {
+                        false
                     }
-                    self.fetch_load_inbox
-                        .get(&format!("/load_inbox?id={}", value));
-                    !is_same
                 } else {
                     false
                 }
