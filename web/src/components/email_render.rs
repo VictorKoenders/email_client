@@ -56,12 +56,13 @@ impl EmailRender {
         } else {
             format!("{:?}", part.body).into()
         };
+        let part_header_width = if body.is_empty() { 3 } else { 6 };
         let mut headers = self
             .email
             .headers
             .iter()
             .filter(|h| part_eq_id(Some(part), h.mail_part_id))
-            .map(EmailRender::render_part_header);
+            .map(|h| EmailRender::render_part_header(h, part_header_width));
         if body.is_empty() {
             html! { <>{for headers}</> }
         } else {
@@ -79,13 +80,21 @@ impl EmailRender {
         }
     }
 
-    fn render_part_header(header: &shared::EmailSmtpHeader) -> Html<Self> {
+    fn render_part_header(
+        header: &shared::EmailSmtpHeader,
+        left_column_width: usize,
+    ) -> Html<Self> {
+        let left_column_class = format!("col-md-{}", left_column_width);
+        let right_column_class = format!(
+            "col-md-{} overflow underline-dotted",
+            12 - left_column_width
+        );
         html! {
             <div class="row">
-                <div class="col-md-6">
+                <div class={left_column_class}>
                     {&header.key}
                 </div>
-                <div class="col-md-6 overflow underline-dotted" title={&header.value}>
+                <div class={right_column_class} title={&header.value}>
                     {&header.value}
                 </div>
             </div>
