@@ -106,7 +106,64 @@ fn load_email_by_id(conn: DbConn, _user: Auth, id: Uuid) -> Result<Json<shared::
 #[database("DATABASE_URL")]
 struct DbConn(rocket_diesel::PgConnection);
 
+fn send_email(from: &str, to: &str, subject: &str, body: &str) -> Result<()> {
+    use failure::ResultExt;
+    use lettre::*;
+    use lettre_email::*;
+    use resolv::record::MX;
+    use resolv::{Class, RecordType, Resolver};
+
+    let email = Email::builder()
+        .to(to)
+        .from(from)
+        .subject(subject)
+        .body(body)
+        .build()?;
+    let domain = {
+        let mut split = to.split('@');
+        if split.next().is_none() {
+            failure::bail!("Could not parse email address");
+        }
+        if let Some(host) = split.next() {
+            host
+        } else {
+            failure::bail!("Could not parse email address");
+        }
+    };
+
+    let mut resolver = Resolver::new().unwrap();
+    let mut response = resolver
+        .query(domain.as_bytes(), Class::IN, RecordType::MX)
+        .context("MX resolver")?;
+    let address = response
+        .answers::<MX>()
+        .next()
+        .ok_or_else(|| failure::format_err!("Could not get a valid MX address"))?;
+
+    println!("Connecting to {}", address.data.exchange);
+    println!("{:?}", address);
+    let addr = dns_lookup::lookup_host(&address.data.exchange).context("dns lookup")?;
+    println!("Addresses: {:?}", addr);
+
+    println!("Trying to connect to {}", address.data.exchange);
+    let mailer = SmtpClient::new_simple(&address.data.exchange).context("SmtpClient")?;
+    let mut transport = mailer.transport();
+    let result = transport.send(email.into()).context("transport::send")?;
+
+    println!("Remote code: {}", result.code);
+    println!("Remote response: {:#?}", result.message);
+    Ok(())
+}
+
 fn main() {
+    send_email(
+        "test@trangar.com",
+        "victor.koenders@gmail.com",
+        "Subject here",
+        "Body here",
+    )
+    .expect("Could not send email");
+    return;
     let _ = dotenv::dotenv();
     let database_url =
         std::env::var("DATABASE_URL").expect("Could not find env variable DATABASE_URL");
